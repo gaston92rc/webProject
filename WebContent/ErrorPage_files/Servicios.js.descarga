@@ -1,0 +1,258 @@
+define("app/Servicios", ["signals", "app/PreloadWS", "facebook", "jquery", "google-analytics"], function(signals, PreloadWS) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		Gestionar todas las llamadas externas de la app: Servidor, Facebook, GoogleTagManager
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+
+	var Instancia;
+	var Singleton = function(){
+
+		var _preloadws, _cargaInicialTerminada, _iniciandoSesion;
+
+		var _jsonVarPublic = JSON.parse(window.jsonVarPublic);
+
+		var _eventos = {
+			SERVICIOS_INICIADOS : new signals.Signal(),
+			WS_CARGADO : new signals.Signal(),
+			WS_REGISTRO_GUARDADO : new signals.Signal(),
+			WS_COMENTARIO_GUARDADO : new signals.Signal(),
+			WS_POSTS_CARGADOS : new signals.Signal(),
+			WS_MENSAJE_ENVIADO : new signals.Signal(),
+			WS_CV_ENVIADO : new signals.Signal(),
+			ERROR_GENERAL : new signals.Signal(),
+			ERROR_AL_CARGAR_WS : new signals.Signal(),
+			ERROR_AL_GUARDAR_EL_COMENTARIO : new signals.Signal()
+		}
+		
+		var Public = function() {
+			var that = this;
+			that.eventos = _eventos;
+
+			that.init = function() {
+				console.log("Servicios::init");
+
+				_preloadws = new PreloadWS();
+
+				ga('create', _jsonVarPublic.id_analitycs);
+        		ga('send', 'pageview');
+        		
+				_eventos.SERVICIOS_INICIADOS.dispatch();	
+			}
+			
+			that.getBaseUrl = function() {
+				return _jsonVarPublic.base_url;
+			}
+			
+			that.getBaseHash = function() {
+				return _jsonVarPublic.base_hash;
+			}
+			
+			that.getBaseWS = function(){
+				return _jsonVarPublic.base_ws;
+			}
+
+			that.getEsNavegadorAntiguo = function(){
+				return _jsonVarPublic.es_navegador_antiguo;
+			}
+			
+			that.getSeccionActual = function(){
+				return _jsonVarPublic.seccion;
+			}
+
+			that.getTipoDeDispositivo = function(){
+				return _jsonVarPublic.tipo_dispositivo;
+			}
+
+			that.enviarAnalitycs = function(tipo, descripcion){
+				console.log("Servicios::enviarAnalitycs");
+				
+				ga('send', 'event', tipo, descripcion);
+			}
+
+			that.guardarComentario = function(datos){
+				console.log("Servicios::guardarComentario");
+
+				wsGuardarComentario(datos);
+			}
+
+			that.enviarMensaje = function(datos){
+				console.log("Servicios::enviarMensaje");
+
+				wsEnviarMensaje(datos);
+			}
+
+			that.enviarCV = function(datos, archivos){
+				console.log("Servicios::enviarCV");
+
+				wsEnviarCV(datos, archivos);
+			}
+
+			that.iniciarFacebook = function(){
+				console.log("Servicios::iniciarFacebook");
+
+				fbIniciarApi();
+			}
+
+			that.compartirUrlEnFacebook = function() {
+				window.open("https://facebook.com/sharer/sharer.php?m2w&u=" + encodeURIComponent(_jsonVarPublic.url), _jsonVarPublic.post_title, 'height=450, width=550, top='+($(window).height()/2 - 225) +', left='+$(window).width()/2 +', toolbar=0, location=0, menubar=0, directories=0, scrollbars=0');
+			}
+
+			that.compartirUrlEnTwitter = function() {
+				console.log("Servicios::compartirEnTwitter");
+				
+				window.open('http://twitter.com/share?url=' + _jsonVarPublic.url + '&text=' + _jsonVarPublic.post_title, _jsonVarPublic.post_title, 'height=450, width=550, top='+($(window).height()/2 - 225) +', left='+$(window).width()/2 +', toolbar=0, location=0, menubar=0, directories=0, scrollbars=0');
+			}
+
+			that.compartirUrlEnGplus = function(){
+				console.log("Servicios::compartirUrlEnGplus");
+
+				window.open('https://plus.google.com/share?url=' + _jsonVarPublic.url, _jsonVarPublic.post_title, 'height=450, width=550, top='+($(window).height()/2 - 225) +', left='+$(window).width()/2 +', toolbar=0, location=0, menubar=0, directories=0, scrollbars=0');
+			}
+
+			that.compartirUrlEnLinkedin = function(){
+				console.log("Servicios::compartirUrlEnLinkedin");
+				
+				window.open('https://www.linkedin.com/cws/share?url=' + _jsonVarPublic.url, _jsonVarPublic.post_title, 'height=450, width=550, top='+($(window).height()/2 - 225) +', left='+$(window).width()/2 +', toolbar=0, location=0, menubar=0, directories=0, scrollbars=0');
+			}
+
+			that.cargarPosts = function(datos){
+				wsCargarPosts(datos);
+			}
+			
+		}
+		
+		function fbIniciarApi(){
+			console.log("Servicios::fbIniciarApi");
+
+			FB.init({
+				appId : _jsonVarPublic.social_facebook,
+			});
+
+		}
+
+		function wsGuardarComentario(datos){
+			console.log("Servicios::wsGuardarComentario::");
+			console.log(datos);
+
+			_preloadws.eventos.WS_CARGADO.addOnce(wsRespuestaGuardarComentario, this);
+			_preloadws.eventos.ERROR_AL_CARGAR_WS.addOnce(errorGeneral, this);
+			_preloadws.init(_jsonVarPublic.base_url + "ws/web101/backend/?p=ws3_insertcomment", {
+				"ID" : _jsonVarPublic.post_id,
+				"comment_author" : datos.nombre,
+				"comment_author_email" : datos.email,
+				"comment_content" : datos.texto,
+			});
+		}
+
+		function wsRespuestaGuardarComentario(respuesta){
+			console.log("Servicios::wsRespuestaGuardarComentario::");
+			console.log(respuesta);
+
+			if(respuesta.Success){
+				_eventos.WS_COMENTARIO_GUARDADO.dispatch();
+			}else{
+				_eventos.ERROR_AL_GUARDAR_EL_COMENTARIO.dispatch();
+			}
+		}
+
+		function wsEnviarMensaje(datos){
+			console.log("Servicios::wsGuardarComentario::");
+			console.log(datos);
+
+			_preloadws.eventos.WS_CARGADO.addOnce(wsRespuestaEnviarMensaje, this);
+			_preloadws.eventos.ERROR_AL_CARGAR_WS.addOnce(errorGeneral, this);
+			_preloadws.init(_jsonVarPublic.base_url + "php/app/enviarMensaje.php", {
+				"nombre" : datos.nombre,
+				"mensaje" : datos.mensaje,
+				"email" : datos.email
+			});
+		}
+
+		function wsRespuestaEnviarMensaje(respuesta){
+			console.log("Servicios::wsRespuestaEnviarMensaje::");
+			console.log(respuesta);
+
+			if(respuesta.hasOwnProperty("ok")){
+				_eventos.WS_MENSAJE_ENVIADO.dispatch();
+			}else{
+				_eventos.ERROR_AL_GUARDAR_EL_COMENTARIO.dispatch();
+			}
+		}
+
+		function wsEnviarCV(datos, archivos){
+			console.log("Servicios::wsEnviarCV::");
+			console.log(datos);
+
+			_preloadws.eventos.WS_CARGADO.addOnce(wsRespuestaEnviarCV, this);
+			_preloadws.eventos.ERROR_AL_CARGAR_WS.addOnce(errorGeneral, this);
+			_preloadws.init(_jsonVarPublic.base_url + "php/app/enviarCV.php", {
+				"nombre" : datos.nombre,
+				"mensaje" : datos.mensaje,
+				"email" : datos.email,
+				"puesto" : datos.puesto
+			}, archivos);
+		}
+
+		function wsRespuestaEnviarCV(respuesta){
+			console.log("Servicios::wsRespuestaEnviarCV::");
+			console.log(respuesta);
+
+			if(respuesta.hasOwnProperty("ok")){
+				_eventos.WS_CV_ENVIADO.dispatch();
+			}else{
+				_eventos.ERROR_AL_GUARDAR_EL_COMENTARIO.dispatch();
+			}
+		}
+
+		function wsCargarPosts(datos){
+			console.log("Servicios::wsCargarPosts::");
+			console.log(datos);
+
+
+			_preloadws.eventos.WS_CARGADO.addOnce(wsPostsCargados, this);
+			_preloadws.eventos.ERROR_AL_CARGAR_WS.addOnce(errorGeneral, this);
+			_preloadws.init(_jsonVarPublic.base_url + "php/app/cargarPosts.php", {
+				"pagina" : datos.pagina,
+				"seccion" : _jsonVarPublic.seccion,
+				"id" : _jsonVarPublic.seccion_datos
+
+			});
+		}
+
+		function wsPostsCargados(respuesta){
+			console.log("Servicios::wsPostsCargados::");
+			console.log(respuesta);
+
+			_eventos.WS_POSTS_CARGADOS.dispatch(respuesta);
+		}
+
+
+		function errorGeneral(error) {
+			console.log("Servicios::errorGeneral");
+			console.log(error);
+			
+			_preloadws.eventos.WS_CARGADO.removeAll();
+			_preloadws.eventos.ERROR_AL_CARGAR_WS.removeAll();
+
+			_eventos.ERROR_GENERAL.dispatch(error);
+		}
+		
+		return new Public;
+	}
+
+	return {
+		getInstance : function() {
+			console.log('Servicios::getInstance');
+
+			if (!Instancia) {
+				Instancia = Singleton();
+			}
+
+			return Instancia;
+		}
+	}
+});

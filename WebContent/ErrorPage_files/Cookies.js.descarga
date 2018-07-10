@@ -1,0 +1,107 @@
+define("app/Cookies", ["signals"], function(signals) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+
+	var Estaticas = {};
+	
+	var Instancia = function() {
+		var that = this;
+		var nombre;
+		var mensaje = mensaje;
+		
+		var Eventos = {
+			MODULO_PREPARADO : new signals.Signal()
+		}
+		
+		that.eventos = Eventos; 
+		that.getNombre = nombre;
+
+		that.init = function() {
+			console.log("Cookies::init::");
+			
+			nombre='cookies';
+
+			//Disparo de eventos
+			Eventos.MODULO_PREPARADO.dispatch();
+
+			iniciarAvisoCookies();
+		}
+
+		that.dispose = function() {
+			console.log("Cookies::Dispose");
+			
+		}
+		
+		that.comprobarCookies = function(cname){
+			console.log("Cookies::comprobarCookies");
+
+			if(document.cookie){
+			    var name = cname + "=";
+			    var ca = document.cookie.split(';');
+			    for(var i=0; i<ca.length; i++) {
+			        var c = ca[i];
+			        while (c.charAt(0)==' ') c = c.substring(1);
+			        if (c.indexOf(name) != -1) return c.substring(name.length,c.length);
+			    }
+			}
+		}
+
+		function generarAlertaCookies(){
+			console.log(mensaje);
+			var cartela = $("<div></div>",{
+				"id":"mensaje-cookies"
+			});
+			/*
+			var texto = $("<p></p>").html('Utilizamos cookies propias y de terceros para mejorar tu experiencia, personalizar y analizar tu navegación y mostrar publicidad. Si sigues navegando, consideramos que aceptas su uso. Para cambiar la configuración u obtener más información entra en <a style="color: black!important;" href="../politica-de-cookies/"> Política de Cookies.</a>');
+			*/
+			var texto = $("<p></p>").html('En 101 utilizamos cookies para saber lo que te gusta y ofrecerte una mejor experiencia digital, al navegar por nuestra web entendemos que las aceptas con cariño.');
+			var botones = $("<p></p>").html('<a class="cookies-mas_info" href="../politica_cookies" target="_blank"> Más información </a> <a href="" class="cookies-aceptar">Ñam, cookies</a>');
+			cartela.append(texto);
+			cartela.append(botones);
+
+			console.log(cartela);
+			
+			return cartela;
+		}
+
+		function iniciarAvisoCookies(){
+			console.log("Cookies::iniciarAvisoCookies");
+
+			if(that.comprobarCookies("cookiesAceptadas") == "si"){
+				console.log("Cookies::Ya tengo las cookies aceptadas");
+			}else{
+				console.log("Cookies::Aún no tengo las cookies guardadas");
+				$("body").prepend(generarAlertaCookies());
+				/*
+				$(window).scroll(function(){
+					console.log("Has hecho scroll, guardo cookies");
+					document.cookie="cookiesAceptadas=si";
+					$("#mensaje-cookies").slideUp();
+					console.log(that.comprobarCookies("cookiesAceptadas"));
+				});
+				*/
+				$("body a").click(function(e){
+					console.log("Has hecho click, guardo cookies");
+					if(!$(this).hasClass("cookies-mas_info") && !$(this).hasClass("cookies-aceptar")){
+						document.cookie="cookiesAceptadas=si";
+						$("#mensaje-cookies").slideUp();
+						console.log(that.comprobarCookies("cookiesAceptadas"));
+					}else if(!$(this).hasClass("cookies-mas_info") && $(this).hasClass("cookies-aceptar")){
+						e.preventDefault();
+						document.cookie="cookiesAceptadas=si";
+						$("#mensaje-cookies").slideUp();
+						console.log(that.comprobarCookies("cookiesAceptadas"));
+					}
+				});
+			}
+		}
+	}
+	
+	return Instancia;
+});

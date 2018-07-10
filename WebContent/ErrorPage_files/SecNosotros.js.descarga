@@ -1,0 +1,332 @@
+
+define("app/SecNosotros", ["signals", "app/Servicios", "app/PreloadIMG", "tools/FullScreen", "plugins/Slide", "jquery"], function(signals, Servicios, PreloadIMG, FullScreen, Slide) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 *
+	 *	MEJORAS
+	 *		...
+	 */
+
+	var _servicios;
+	
+	var Instancia = function() {
+
+		var _that = this;
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _mTotales, _slideAgencia, _slideAdministracion, _slideCreatividad, _slideProduccion, _slideCuentas, _slideSocial, _slideHistoriaAnos, _slideHistoriaProyectos;
+		
+		var _eventos = {
+			SECCION_PREPARADA : new signals.Signal(),
+			SECCION_MOSTRADA : new signals.Signal(),
+			SECCION_OCULTADA : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.get_nombre = _nombre;
+		
+		_that.init = function() {
+			console.log("SecNosotros::init");
+
+			_nombre = "nosotros";
+			_servicios = Servicios.getInstance();
+			_seccionDOM = $("#nosotros");
+			_fullScreen = new FullScreen();
+
+			cargarImagenesIniciales();	
+		}
+	
+		_that.dispose = function() {
+			console.log("SecNosotros::Dispose::");
+			
+			_eventos.SECCION_PREPARADA.removeAll();
+			_eventos.SECCION_MOSTRADA.removeAll();
+			_eventos.SECCION_OCULTADA.removeAll();
+		}
+		
+		_that.mostrarSeccion = function() {
+			console.log("SecNosotros::mostrarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeIn(500, function(){
+					_eventos.SECCION_MOSTRADA.dispatch();				
+				});
+			}
+		}
+
+		_that.ocultarSeccion = function() {
+			console.log("SecNosotros::ocultarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeOut(500, function(){
+					_seccionDOM.remove();
+					_eventos.SECCION_OCULTADA.dispatch();
+					_that.dispose();
+				});
+			}
+		}
+		
+		function cargarImagenesIniciales(){
+			console.log("SecNosotros::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "nosotros");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("SecNosotros::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+
+			_fullScreen.init(null, null, null, 550);
+			
+			$("#nosotros .mas-info-icon").click(function(){
+				var _masInfo = $(this);
+				var _bio = _masInfo.parent().parent().children(".bio");
+
+				if(_masInfo.hasClass("desplegado")){
+					_bio.slideUp(400, function(){
+						_bio.css("display", "none");
+						_masInfo.removeClass("desplegado");
+					});
+
+				}else{
+					_bio.css({"display": "block"});
+					_bio.slideDown(400, function(){
+						_masInfo.addClass("desplegado");
+					});
+
+				}
+				
+			});
+
+			//cambiarImagenesDepartamentos();
+
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			configurarSlideDeAgencia();
+
+		}
+
+		function configurarSlideDeAdministracion(){
+			console.log("SecInicio::configurarSlideDeAdministracion");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_administracion");
+			duracion = Math.random() * (6 - 4) + 4;
+
+			_slideAdministracion = new Slide();
+			_slideAdministracion.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideAdministracion.play();
+			});
+			_slideAdministracion.init(slideDOM, duracion, 299, 293);
+
+			configurarSlideDeCreatividad();
+
+		}
+
+		function configurarSlideDeCreatividad(){
+			console.log("SecInicio::configurarSlideDeCreatividad");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_creatividad");
+			duracion = Math.random() * (6 - 4) + 4;
+			
+			_slideCreatividad = new Slide();
+			_slideCreatividad.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideCreatividad.play();
+			});
+			_slideCreatividad.init(slideDOM, duracion, 299, 293);
+
+			configurarSlideDeProduccion();
+
+		}
+
+		function configurarSlideDeProduccion(){
+			console.log("SecInicio::configurarSlideDeProduccion");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_produccion");
+			duracion = Math.random() * (6 - 4) + 4;
+			
+			_slideProduccion = new Slide();
+			_slideProduccion.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideProduccion.play();
+			});
+			_slideProduccion.init(slideDOM, duracion, 299, 293);
+
+			configurarSlideDeCuentas();
+
+		}
+
+		function configurarSlideDeCuentas(){
+			console.log("SecInicio::configurarSlideDeCuentas");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_cuentas");
+			duracion = Math.random() * (6 - 4) + 4;
+			
+			_slideCuentas = new Slide();
+			_slideCuentas.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideCuentas.play();
+			});
+			_slideCuentas.init(slideDOM, duracion, 299, 293);
+
+			configurarSlideDeSocial();
+
+		}
+
+		function configurarSlideDeSocial(){
+			console.log("SecInicio::configurarSlideDeSocial");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_social");
+			duracion = Math.random() * (6 - 4) + 4;
+
+			_slideSocial = new Slide();
+			_slideSocial.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideSocial.play();
+			});
+			_slideSocial.init(slideDOM, duracion, 299, 293);
+
+			configurarSlideDeAgencia();
+
+		}
+
+		function configurarSlideDeAgencia(){
+			console.log("SecInicio::configurarSlideDeAgencia");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_agencia");
+			duracion = 5;
+
+			_slideAgencia = new Slide();
+			_slideAgencia.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideAgencia.play();
+			});
+			_slideAgencia.init(slideDOM, duracion, 904, "auto");
+
+			//configurarSlideDeHistoriaAnos();
+
+			_eventos.SECCION_PREPARADA.dispatch();
+
+		}
+
+		function configurarSlideDeHistoriaAnos(){
+			console.log("SecInicio::configurarSlideDeHistoriaAnos");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_historiaAnos");
+			duracion = 5;
+
+			_slideHistoriaAnos = new Slide();
+			/*
+			_slideAgencia.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideAgencia.play();
+			});
+			*/
+
+			_slideHistoriaAnos.init(slideDOM, duracion, 904, 581);
+
+			configurarSlideDeHistoriaProyectos();
+		}
+
+		function configurarSlideDeHistoriaProyectos(){
+
+			console.log("SecInicio::configurarSlideDeHistoriaProyectos");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide_historiaProyectos");
+			duracion = 5;
+
+			_slideHistoriaProyectos = new Slide();
+			/*
+			_slideAgencia.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideCasos.play();
+			});
+			*/
+			_slideHistoriaProyectos.init(slideDOM, duracion, 904, 581);
+
+		}
+
+		function cambiarImagenesDepartamentos(){
+			
+			$.each($(".departamento"), function(key, value){
+				console.log(value);
+
+			})
+		}
+
+		function redimensionar(){
+			console.log("SecNosotros::redimensionar");
+
+			_mTotales = _fullScreen.getAbsoluto();
+
+			if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad"){
+				_seccionDOM.find("#cabecera").innerWidth(_mTotales.w);
+ 				_seccionDOM.find("#cabecera").innerHeight(_mTotales.h);
+
+ 				_seccionDOM.find(".box-text.center").each(function(clave, valor){
+					$(this).css({
+						"margin-top" : (_mTotales.h / 2) - ($(this).innerHeight() / 2) 
+					});
+				});
+			}
+
+			
+
+ 			_seccionDOM.find("#agencia").innerWidth(_mTotales.w);
+ 			_seccionDOM.find("#agencia").innerHeight(_mTotales.h);
+
+ 			_seccionDOM.find("#historia").innerWidth(_mTotales.w);
+ 			_seccionDOM.find("#historia").innerHeight(_mTotales.h/2);
+ 			
+
+ 			
+
+			_seccionDOM.find("#agencia").each(function(clave, valor){
+				$(this).children("h2").css({
+					"margin-top" : (_mTotales.h / 2) - ($(this).children("h2").innerHeight() / 2) 
+				});
+				$(this).next().css({
+					"margin-top" : -(_mTotales.h / 2) + ($(this).children("h2").innerHeight() / 2) + 50
+				});
+			});
+
+			_seccionDOM.find("#historia").each(function(clave, valor){
+				$(this).children("h2").css({
+					"margin-top" : (_mTotales.h / 4) - ($(this).children("h2").innerHeight() / 2) 
+				});
+				$(this).next().css({
+					"margin-top" : -(_mTotales.h / 4) + ($(this).children("h2").innerHeight() / 2) + 50
+				});
+			});
+		}
+	}
+	
+	return Instancia;
+});

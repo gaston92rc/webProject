@@ -1,0 +1,126 @@
+define(["app/Servicios", "signals"], function(Servicios, signals) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		Carga un array de imágenes
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		Puedo ir añadiendo imágenes una vez iniciada la carga
+	 */
+
+	var Estaticas = {};
+	var Instancia = function() {
+		var _that = this;
+		
+		var _servicios, _arrImagenes, _arrImagenesCargando, _numImagenesPorCargar, _parent;
+		
+		var _eventos = {
+			IMAGENES_CARGADAS : new signals.Signal(),
+			IMAGEN_CARGADA : new signals.Signal(),
+			IMAGEN_CARGADA_ERROR : new signals.Signal(),
+			IMAGEN_CARGADA_REPETIDA : new signals.Signal(),
+			TIEMPO_DE_CARGA_EXCESIVO : new signals.Signal()
+		}
+	
+		_that.eventos = _eventos;
+		
+		_that.init = function(imagenes, id) {
+			console.log("PreloadIMG::init::"+id);
+			console.log("PreloadIMG::***************************** "+id);
+			_parent = id;
+			_servicios = Servicios.getInstance();
+			_arrImagenes=null;
+			_arrImagenes = imagenes;
+			_arrImagenesCargando = new Array();
+			_numImagenesPorCargar = imagenes.length;
+			
+			cargarImagenes();
+		}
+
+		_that.dispose = function() {
+			console.log("PreloadIMG::dispose::");
+		}
+		
+		_that.reset = function(){
+			console.log("PreloadIMG::reset::");	
+			
+			_arrImagenes = new Array();
+			_arrImagenesCargando = new Array();
+			_numImagenesPorCargar = 0;
+		}
+		
+		_that.aniadirImagenes = function(nuevasImagenes) {
+			console.log("PreloadIMG::aniadirImagenes");
+			_arrImagenes = _arrImagenes.concat(nuevasImagenes);
+			_numImagenesPorCargar += nuevasImagenes.length;
+
+			cargarImagenes();
+		}
+		
+		_that.comprobarImagenCargada = function(url){
+			console.log("PreloadIMG::comprobarImagenCargada");
+			
+			if ($.inArray(url, _arrImagenesCargando) == -1) {
+			//if(_arrImagenesCargando.indexOf(url)==-1){
+				return false;	
+			}else{
+				return true;
+			} 
+		}
+		
+		function cargarImagenes(){
+			console.log("PreloadIMG::Instancia.cargarImagenes");
+			console.log(_arrImagenes);
+
+			if(_arrImagenes.length){
+				for (clave in _arrImagenes) {
+					if ($.inArray(_arrImagenes[clave], _arrImagenesCargando) == -1) {
+					//if(_arrImagenesCargando.indexOf(_arrImagenes[clave])==-1){
+						console.log("Cargo "+_arrImagenes[clave]);
+						_arrImagenesCargando.push(_arrImagenes[clave]);
+						var imagen = new Image();
+						
+						
+						$(imagen).bind('load', function(){
+							console.log('PreloadIMG::Imagen cargada '+$(this).attr('src'));
+							_numImagenesPorCargar--;
+							_eventos.IMAGEN_CARGADA.dispatch(imagen);
+							
+							comprobarImagenesRestantes();		
+						});
+						$(imagen).bind('error', function(){
+							console.log('PreloadIMG::Error al cargar la imagen '+$(this).attr('src'));
+							_numImagenesPorCargar--;
+							_eventos.IMAGEN_CARGADA_ERROR.dispatch(imagen);
+							
+							comprobarImagenesRestantes();		
+						});
+						if(_servicios.getEsNavegadorAntiguo()){
+							imagen.src = _arrImagenes[clave]+"?"+new Date().getTime();
+						}else{
+							imagen.src = _arrImagenes[clave];
+						}
+					}else{
+						console.log("PreloadIMG::Imagen repetida");
+						_numImagenesPorCargar--;
+						_eventos.IMAGEN_CARGADA_REPETIDA.dispatch();	
+					}
+				}
+			}else{
+				_eventos.IMAGENES_CARGADAS.dispatch();
+			}
+		}
+	
+		function comprobarImagenesRestantes(){
+			console.log("PreloadIMG::B::Instancia.comprobarImagenesRestantes");
+			console.log("PreloadIMG::B::Número de imágenes por cargar "+_numImagenesPorCargar+" "+_parent);
+			console.log(_arrImagenes);
+			if (_numImagenesPorCargar<1) {
+				console.log("PreloadIMG::envío el evento cuando todas las imágenes están cargadas");
+				_eventos.IMAGENES_CARGADAS.dispatch();
+			}
+		}
+	}
+
+	return Instancia;
+});

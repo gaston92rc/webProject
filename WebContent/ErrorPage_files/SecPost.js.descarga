@@ -1,0 +1,297 @@
+
+define("app/SecPost", ["signals", "app/Servicios", "app/PreloadIMG", "tools/FullScreen", "tools/FormatText", "jquery", "jquery-stellar"], function(signals, Servicios, PreloadIMG, FullScreen, FormatText) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 *
+	 *	MEJORAS
+	 *		...
+	 */
+
+	var _servicios;
+	
+	var Instancia = function() {
+
+		var _that = this;
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _formatear, _fullScreen, _bloqueoEnvioComentario;
+		
+		var _eventos = {
+			SECCION_PREPARADA : new signals.Signal(),
+			SECCION_MOSTRADA : new signals.Signal(),
+			SECCION_OCULTADA : new signals.Signal(),
+			ENVIAR_COMENTARIO : new signals.Signal(),
+			ERROR_EN_COMENTARIO : new signals.Signal(),
+			COMPARTIR_URL_FACEBOOK : new signals.Signal(),
+			COMPARTIR_URL_TWITTER : new signals.Signal(),
+			COMPARTIR_URL_GPLUS : new signals.Signal(),
+			COMPARTIR_URL_LINKEDIN : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.get_nombre = _nombre;
+		
+		_that.init = function() {
+			console.log("SecPost::init");
+
+			_nombre = "post";
+			_servicios = Servicios.getInstance();
+			_seccionDOM = $("#post");
+			_fullScreen = new FullScreen();
+			_formatear = new FormatText.getInstance();
+
+			TweenMax.to(_seccionDOM, 0, {alpha: 0});
+
+			cargarImagenesIniciales();	
+		}
+	
+		_that.dispose = function() {
+			console.log("SecPost::Dispose::");
+			
+			_eventos.SECCION_PREPARADA.removeAll();
+			_eventos.SECCION_MOSTRADA.removeAll();
+			_eventos.SECCION_OCULTADA.removeAll();
+			_eventos.ENVIAR_COMENTARIO.removeAll();
+		}
+		
+		_that.mostrarSeccion = function() {
+			console.log("SecPost::mostrarSeccion");
+			
+			TweenMax.to(_seccionDOM, 1, {
+				alpha: 1, 
+				onComplete: function(){
+					_eventos.SECCION_MOSTRADA.dispatch();
+				}
+			});
+		}
+
+		_that.ocultarSeccion = function() {
+			console.log("SecPost::ocultarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeOut(500, function(){
+					_seccionDOM.remove();
+					_eventos.SECCION_OCULTADA.dispatch();
+					_that.dispose();
+				});
+			}
+		}
+
+		_that.comentarioGuardado = function(){
+			comentarioGuardado();
+		}
+		
+		function cargarImagenesIniciales(){
+			console.log("SecPost::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "post");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("SecPost::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+
+			_seccionDOM.find("#enviar_comentario").click(function(e){
+				e.preventDefault();
+				
+				if(!_bloqueoEnvioComentario){
+					var nombre, email, texto;
+
+					nombre = _seccionDOM.find('#form_comentario_post input[name="name"]');
+					email = _seccionDOM.find('#form_comentario_post input[name="mail"]');
+					texto = _seccionDOM.find('#form_comentario_post textarea[name="texto"]');
+
+					if(!_formatear.comprobarEstandar(nombre.val())){
+						nombre.addClass("error");
+						_eventos.ERROR_EN_COMENTARIO.dispatch("nombre");
+					}else if(!_formatear.comprobarEmail(email.val())){
+						email.addClass("error");
+						_eventos.ERROR_EN_COMENTARIO.dispatch("email");
+					}else if(!_formatear.comprobarEstandar(texto.val())){
+						texto.addClass("error");
+						_eventos.ERROR_EN_COMENTARIO.dispatch("textoº");
+					}else{
+						_bloqueoEnvioComentario = true;
+						_eventos.ENVIAR_COMENTARIO.dispatch({
+							nombre : nombre.val(), 
+							email : email.val(),
+							texto : texto.val()
+						});
+					}
+				}
+			});
+
+			_seccionDOM.find("input, textarea").on("keyup change", function(){
+				var nombre, email, texto, campo;
+
+				campo = $(this);
+				nombre = _seccionDOM.find('#form_comentario_post input[name="name"]');
+				email = _seccionDOM.find('#form_comentario_post input[name="mail"]');
+				texto = _seccionDOM.find('#form_comentario_post textarea[name="texto"]');
+
+				if(campo.attr("name") == "mail"){
+					if(_formatear.comprobarEmail(email.val())){
+						campo.removeClass("error");	
+					}else{
+						campo.addClass("error");	
+					}
+				}else{
+					if(_formatear.comprobarEstandar(campo.val())){
+						campo.removeClass("error");	
+					}else{
+						campo.addClass("error");
+					}
+				}
+			});
+
+			_seccionDOM.find(".social_tools .facebook").click(function(){
+				_eventos.COMPARTIR_URL_FACEBOOK.dispatch();
+			});
+			_seccionDOM.find(".social_tools .twitter").click(function(){
+				_eventos.COMPARTIR_URL_TWITTER.dispatch();
+			});
+			_seccionDOM.find(".social_tools .gplus").click(function(){
+				_eventos.COMPARTIR_URL_GPLUS.dispatch();
+			});
+			_seccionDOM.find(".social_tools .linkedin").click(function(){
+				_eventos.COMPARTIR_URL_LINKEDIN.dispatch();
+			});
+
+			_fullScreen.init(null, null, null, 550);
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			if(_servicios.getTipoDeDispositivo() == "pc"){
+				$.stellar({
+					horizontalScrolling: false,
+					verticalOffset: 0,
+					responsive: true,
+					hideDistantElements: false,
+				});
+			}
+
+			if(_seccionDOM.children("section").children("p").children("a").children("img")){
+				_seccionDOM.children("section").children("p").children("a").css("cursor","default");
+			}
+
+			_seccionDOM.children("section").children("p").children("a").click(function(e){
+				if($(this).children("img").length > 0){
+					e.preventDefault();
+				}
+			});
+
+			comprobarVideoEmbebido();
+
+			_eventos.SECCION_PREPARADA.dispatch();
+		}
+
+		function comentarioGuardado(){
+			console.log("SecInicio::comentarioGuardado");
+
+			var nombre, email, texto;
+
+			nombre = _seccionDOM.find('#form_comentario_post input[name="name"]');
+			email = _seccionDOM.find('#form_comentario_post input[name="mail"]');
+			texto = _seccionDOM.find('#form_comentario_post textarea[name="texto"]');
+
+			nombre.val("");
+			email.val("");
+			texto.val("");
+			_bloqueoEnvioComentario = false;
+		}
+
+		function redimensionar(){
+			console.log("SecInicio::redimensionar");
+
+			var mCabecera = _fullScreen.getProporcional(_seccionDOM.find("#cabecera_blog_detalle img").innerWidth(), _seccionDOM.find("#cabecera_blog_detalle img").innerHeight());
+			_mTotales = _fullScreen.getAbsoluto();
+
+			_seccionDOM.find("#cabecera_blog_detalle").innerWidth(_mTotales.w);
+			_seccionDOM.find("#cabecera_blog_detalle").innerHeight(_mTotales.h / 2);
+ 			_seccionDOM.find("#cabecera_blog_detalle img").innerWidth(mCabecera.w);
+ 			_seccionDOM.find("#cabecera_blog_detalle img").innerHeight(mCabecera.h);
+ 			_seccionDOM.find("#cabecera_blog_detalle img").css({
+ 				"top" : (_mTotales.h / 2) - (mCabecera.h / 2),
+ 				"left" : (_mTotales.w / 2) - (mCabecera.w / 2)
+ 			});
+
+ 			centrarImagenesDeCabecera();
+		}
+
+		function centrarImagenesDeCabecera(){
+			var element, image, elementHeight, imageHeight, imageMargin;
+
+			if(_seccionDOM.find("#cabecera_blog_detalle")){
+				element = _seccionDOM.find("#cabecera_blog_detalle");
+				image = element.children("img");
+
+				elementHeight = element.innerHeight();
+				imageHeight = image.innerHeight();
+
+				imageMargin = ((elementHeight/2)-(imageHeight/2))
+
+				if(imageMargin < 0){
+					image.css("margin-top", imageMargin);
+				}
+
+			}
+
+			if(_seccionDOM.children("#post_relacionados").children("div").children(".content").children("ul").children(".post_relacionados_item").length > 0){
+				elements = _seccionDOM.children("#post_relacionados").children("div").children(".content").children("ul").children(".post_relacionados_item"); 
+
+				$.each(elements, function(key, value){
+					element = $(value)
+
+					if($(value).children(".picture").length >0){
+						element = $(value).children(".picture");
+						image = $(element.children("img"));
+
+						
+						elementHeight = element.innerHeight();
+						imageHeight = image.innerHeight();
+
+						imageMargin = ((elementHeight/2)-(imageHeight/2))
+
+						if(imageMargin < 0){
+							image.css("margin-top", imageMargin);
+						}
+					}
+				});
+			}
+		}
+
+		function comprobarVideoEmbebido(){
+			var element;
+			var pVacio = $("<p>&nbsp;</p>");
+
+			$.each($(".embed-container"), function(key, value){
+				element = $(value);
+				console.log(element);
+
+				if(!element.children().length){
+					element.after(pVacio);
+					element.remove();
+				}
+			});
+		}
+	}
+	
+	return Instancia;
+});

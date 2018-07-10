@@ -1,0 +1,86 @@
+define("app/PreloadWS", ["signals", "jquery-json", "jquery"], function(signals) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		Hacer la llamada a los archivos de la bdd.
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+
+	var Instancia = function() {
+		var _that = this;
+		
+		var _eventos = {
+			WS_CARGADO : new signals.Signal(),
+			ERROR_AL_CARGAR_WS : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		
+		_that.init = function(url, parametros, archivos) {
+			//console.log("PreloadWS::init");
+
+			var data, contentType, processData;
+
+			if (typeof window.FormData != 'undefined') {
+				contentType = false;
+				processData = false;
+				data = new FormData();
+				data.append("envio", $.toJSON(parametros)); 
+
+				if(archivos){
+					$.each(archivos, function(key, value){
+						console.log(value);
+						data.append(key, value);
+					});
+				} 
+			}else{
+				contentType = "application/x-www-form-urlencoded; charset=UTF-8";
+				processData = true;
+				data = {
+					"envio" : $.toJSON(parametros)
+				}
+			}
+
+			$.ajax({
+				url : url,
+				type:"POST",
+				async: true,
+				dataType: "json",
+				cache: false,
+     			processData: processData,
+        		contentType: contentType,
+				data : data,
+				success : function(respuesta) {
+					WSCargado(respuesta);
+				},
+				error : function(error) {
+					errorAlCargarWS(error);
+				}
+			});
+		}
+
+		_that.dispose = function() {
+			//console.log("PreloadWS::Dispose::");
+
+			_eventos.WS_CARGADO.removeAll();
+			_eventos.ERROR_AL_CARGAR_WS.removeAll();
+		}
+		
+		function WSCargado(respuesta) {
+			//console.log("PreloadWS::WSCargado::");
+	
+			_eventos.WS_CARGADO.dispatch(respuesta);
+		}
+	
+		function errorAlCargarWS(error) {
+			//console.log("PreloadWS::ErrorAlCargarLaWS::");
+	
+			_eventos.ERROR_AL_CARGAR_WS.dispatch(error);
+		}
+	}
+
+	return Instancia;
+});
+

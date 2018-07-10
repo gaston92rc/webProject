@@ -1,0 +1,101 @@
+
+define("app/Sec404", ["signals", "app/Servicios", "app/PreloadIMG", "jquery"], function(signals, Servicios, PreloadIMG) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 *
+	 *	MEJORAS
+	 *		...
+	 */
+
+	var _servicios;
+	
+	var Instancia = function() {
+
+		var _that = this;
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre;
+		
+		var _eventos = {
+			SECCION_PREPARADA : new signals.Signal(),
+			SECCION_MOSTRADA : new signals.Signal(),
+			SECCION_OCULTADA : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.get_nombre = _nombre;
+		
+		_that.init = function() {
+			console.log("Sec404::init");
+
+			_nombre = "404";
+			_servicios = Servicios.getInstance();
+			_seccionDOM = $("#error404");
+
+			cargarImagenesIniciales();	
+		}
+	
+		_that.dispose = function() {
+			console.log("Sec404::Dispose::");
+			
+			_eventos.SECCION_PREPARADA.removeAll();
+			_eventos.SECCION_MOSTRADA.removeAll();
+			_eventos.SECCION_OCULTADA.removeAll();
+		}
+		
+		_that.mostrarSeccion = function() {
+			console.log("Sec404::mostrarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeIn(500, function(){
+					_eventos.SECCION_MOSTRADA.dispatch();				
+				});
+			}
+		}
+
+		_that.ocultarSeccion = function() {
+			console.log("Sec404::ocultarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeOut(500, function(){
+					_seccionDOM.remove();
+					_eventos.SECCION_OCULTADA.dispatch();
+					_that.dispose();
+				});
+			}
+		}
+		
+		function cargarImagenesIniciales(){
+			console.log("Sec404::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "404");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("Sec404::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+			
+			_eventos.SECCION_PREPARADA.dispatch();
+		}
+		
+	}
+	
+	return Instancia;
+});

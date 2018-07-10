@@ -1,0 +1,255 @@
+define("app/SecInicio", ["signals", "app/Servicios", "app/PreloadIMG", "tools/FullScreen", "plugins/Slide", "youtube", "masonry", "tweenmax", "jquery-stellar"], function(signals, Servicios, PreloadIMG, FullScreen, Slide, YT, Masonry) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+
+	var _servicios;
+	
+	var Instancia = function() {
+
+		var _that = this;
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _player, _fullScreen, _slideCasos, _mTotales, _msnry;
+		
+		var _objIdsVideos = {
+			"noche" : {
+				"a_partir_de_las" : 21,
+				"id" : "XSGBVzeBUbk"
+			},
+			"tarde" : {
+				"a_partir_de_las" : 14,
+				"id" : "XSGBVzeBUbk"
+			},
+			"maniana" : {
+				"a_partir_de_las" : 8,
+				"id" : "XSGBVzeBUbk"
+			}
+		}
+
+		var _eventos = {
+			SECCION_PREPARADA : new signals.Signal(),
+			SECCION_MOSTRADA : new signals.Signal(),
+			SECCION_OCULTADA : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.get_nombre = _nombre;
+		
+		_that.init = function() {
+			console.log("SecInicio::init");
+
+			_nombre = "inicio";
+			_seccionDOM = $("#inicio");
+			_servicios = Servicios.getInstance();
+			_fullScreen = new FullScreen();
+			
+			TweenMax.to(_seccionDOM, 0, {alpha: 0});
+
+			cargarImagenesIniciales();	
+		}
+	
+		_that.dispose = function() {
+			console.log("SecInicio::Dispose::");
+			
+			_eventos.SECCION_PREPARADA.removeAll();
+			_eventos.SECCION_MOSTRADA.removeAll();
+			_eventos.SECCION_OCULTADA.removeAll();
+		}
+		
+		_that.mostrarSeccion = function() {
+			console.log("SecInicio::mostrarSeccion");
+			
+			TweenMax.to(_seccionDOM, 1, {
+				alpha: 1, 
+				onComplete: function(){
+					_eventos.SECCION_MOSTRADA.dispatch();
+				}
+			});
+		}
+
+		_that.ocultarSeccion = function() {
+			console.log("SecInicio::ocultarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeOut(500, function(){
+					_seccionDOM.remove();
+					_eventos.SECCION_OCULTADA.dispatch();
+					_that.dispose();
+				});
+			}
+		}
+
+		function cargarImagenesIniciales(){
+			console.log("SecInicio::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+				
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM. Excluyo las del slider, porque las cargaré desde el propio plugin.
+			_seccionDOM.find("img").each(function(){
+				if($(this).attr("src").length > 0 && !$(this).parents("div").hasClass("slide")){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "inicio");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("SecInicio::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+
+			_fullScreen.init(null, null, null, 550);
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			if(_servicios.getTipoDeDispositivo() == "pc"){
+				$.stellar({
+					horizontalScrolling: false,
+					verticalOffset: 0,
+					responsive: true
+				});
+			}
+			
+			/*
+			if(YT.Player){
+				configurarVideoDeCabecera();
+			}else{
+				window.onYouTubeIframeAPIReady = function(){
+					configurarVideoDeCabecera();
+				};
+			}
+			*/
+
+/*
+			$(".post_datos").click(function(e){
+				e.stopPropagation();
+				window.location = $(this).children(".titulo").attr("href");
+				return false;
+			});
+*/
+			_msnry = new Masonry(document.querySelector("#posts"), {
+			  	itemSelector: ".post",
+			  	transitionDuration: 0
+			});
+
+			_eventos.SECCION_PREPARADA.dispatch();
+		}
+
+		function configurarVideoDeCabecera(){
+			console.log("SecInicio::configurarVideoDeCabecera");
+
+			_player = new YT.Player(_seccionDOM.find("#video").get(0), {
+				width: 1280,
+			    height: 720,
+			    videoId: _objIdsVideos[verCicloDelDia()].id,
+			    playerVars: { 
+			    	'autoplay': 1, 
+			    	'controls': 0,
+			    	'autohide':1,
+			    	'wmode':'opaque',
+			    	'rel': 0,
+			    	'showinfo': 0
+			   	},
+			    events: {
+			    	'onReady' : function(){
+			    		_player.setVolume(0);
+			    		//_player.setPlaybackQuality('hd1080');
+			    	},
+			      	'onStateChange': function(estado){
+			      		//console.log("SecInicio::onStateChange");
+
+			      		if(estado.data == YT.PlayerState.PLAYING){
+			      			//_player.seekTo(90);
+			      		}else if(estado.data == YT.PlayerState.ENDED){
+			      			_player.seekTo(0);
+							_player.playVideo();
+			      		}
+			      	}
+			    }
+			});
+
+			//configurarSlideDeCasos();
+		}
+
+		function configurarSlideDeCasos(){
+			console.log("SecInicio::configurarSlideDeCasos");
+
+			var slideDOM, duracion;
+
+			slideDOM = _seccionDOM.find("#slide-casos");
+			duracion = 5;
+
+			_slideCasos = new Slide();
+			_slideCasos.eventos.MODULO_PREPARADO.addOnce(function(){
+				_slideCasos.play();
+			});
+			_slideCasos.init(slideDOM, duracion);
+
+			_eventos.SECCION_PREPARADA.dispatch();
+		}
+
+		function verCicloDelDia(){
+			console.log("SecInicio::verCicloDelDia");
+
+			var date = new Date();
+			var hora = date.getHours();
+			var ciclo = "";
+
+			if(hora == 0){
+				hora = 24;
+			}
+
+			for(clave in _objIdsVideos){
+				ciclo = clave;
+
+				if(_objIdsVideos[clave].a_partir_de_las < hora){
+					break;
+				}
+			}
+
+			return ciclo;
+		}
+
+		function redimensionar(){
+			console.log("SecInicio::redimensionar");
+
+			var mCabecera = _fullScreen.getProporcional(_seccionDOM.find("#casos img").innerWidth(), _seccionDOM.find("#casos img").innerHeight());
+			var mVideo = _fullScreen.getProporcional(1280, 720);
+			_mTotales = _fullScreen.getAbsoluto();
+
+			console.log(_mTotales);
+
+			if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad"){
+				_seccionDOM.find("#vision, #casos, #blog").innerWidth(_mTotales.w);
+				_seccionDOM.find("#vision, #casos").innerHeight(_mTotales.h);
+				_seccionDOM.find(".video-overlay").innerWidth(mVideo.w);
+	 			_seccionDOM.find(".video-overlay").innerHeight(mVideo.h);
+	 			_seccionDOM.find("#video").innerWidth(mVideo.w + (mVideo.w * .04));
+	 			_seccionDOM.find("#video").innerHeight(mVideo.h + (mVideo.h * .04));
+	 			_seccionDOM.find("#casos img").innerWidth(mCabecera.w);
+	 			_seccionDOM.find("#casos img").innerHeight(mCabecera.h);
+
+	 			_seccionDOM.find(".box-text.center").each(function(clave, valor){
+
+					$(this).css({
+						"margin-top" : (_mTotales.h / 2) - ($(this).innerHeight() / 2) 
+					});
+				});
+			}
+			
+		}
+		
+	}
+	
+	return Instancia;
+});

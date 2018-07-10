@@ -1,0 +1,176 @@
+define("app/Ventanas", ["signals", "app/Servicios", "app/PreloadIMG", "app/PreloadDOM", "tweenmax", "jquery"], function(signals, Servicios, PreloadIMG, PreloadDOM) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		Gestionar las ventanas de la web.
+	 *		Cargo el DOM desde js porque no es necesario que aparezca el contenido de las ventanas desde el principio, como en las secciones.
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+
+	var Instancia;
+	var Singleton = function() {
+
+		var _preloadIMG, _preloadDOM, _seccionDOM, _servicios, _ventanaActual, _arrVentanas;
+
+		var _eventos = {
+			VENTANAS_PREPARADAS : new signals.Signal(),
+			VENTANA_ABIERTA : new signals.Signal(),
+			VENTANA_CERRADA : new signals.Signal()
+		}
+
+		var Public = function(ventanas) {
+			var that = this;
+			that.eventos = _eventos;
+			_arrVentanas = ventanas;
+
+			that.init = function(ventanas, padre) {
+				console.log("Ventanas::init");
+
+				_arrVentanas = ventanas;
+				_servicios = Servicios.getInstance();
+
+				cargarDOM();
+			}
+
+			that.abrirVentana = function(ventana, parametros) {
+				abrirNuevaVentana(ventana, parametros);
+			}
+
+			that.cerrarVentana = function() {
+				cerrarVentana();
+			}
+
+			that.getVentanaActual = function() {
+				return _ventanaActual;
+			}
+		}
+
+		function cargarDOM(){
+			console.log("Ventanas::cargarDOM");
+
+			_preloadDOM = new PreloadDOM();
+			_preloadDOM.eventos.DOM_CARGADO.addOnce(DOMCargado);
+			_preloadDOM.init(_servicios.getBaseUrl() + "includes/ventanas.html");
+		}
+
+		function DOMCargado(template) {
+			console.log("Ventanas::cargarEstructura");
+
+			_preloadDOM.dispose();
+
+			_seccionDOM = $(template);
+			$("body").prepend(_seccionDOM);
+			_seccionDOM.hide();
+
+			cargarImagenesIniciales();
+		}
+
+		function cargarImagenesIniciales(){
+			console.log("Ventanas::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+				
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.find("img").each(function(){
+				arrImagenes.push($(this).attr("src"));
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "inicio");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("Ventanas::imagenesInicialesCargadas");
+
+			_preloadIMG.dispose();
+
+			_eventos.VENTANAS_PREPARADAS.dispatch();
+		}
+
+		function abrirNuevaVentana(ventana, parametros) {
+			console.log("Ventanas::abrirNuevaVentana");
+			console.log(_ventanaActual);
+			console.log(ventana);
+			console.log($(document).scrollTop());
+			
+			if(_ventanaActual && _ventanaActual!='ventana-mensaje-general'){
+				cerrarVentana();
+			}
+			
+			if(ventana == "ventana-mensaje-general"){
+				_seccionDOM.find("#ventana-mensaje-general h2").text(parametros.titulo);
+				_seccionDOM.find("#ventana-mensaje-general p").text(parametros.mensaje);
+
+				setTimeout(cerrarVentana, 3000);
+			}
+
+			_seccionDOM.show();
+			_seccionDOM.find("#"+ventana).css({
+				"display" : "block",
+				"top" : -1000
+			});
+
+			TweenMax.from(_seccionDOM.find(".bloqueo"), 1, {
+				"alpha" : 0
+			});
+			TweenMax.to(_seccionDOM.find("#"+ventana), .7, {
+				alpha : 1,
+				top : 100,
+				ease : Back.easeOut.config(.7),
+				onComplete : function() {
+					_eventos.VENTANA_ABIERTA.dispatch();
+				}
+			});
+
+			_ventanaActual = ventana;
+		}
+
+		function cerrarVentana(){
+			console.log("Ventanas::cerrarVentana");
+			
+			TweenMax.to(_seccionDOM.find("#"+_ventanaActual), .5, {
+				top : -1000,
+				ease : Back.easeIn.config(.7),
+				onComplete : function() {
+					_seccionDOM.hide();
+					_eventos.VENTANA_CERRADA.dispatch(_ventanaActual);
+					_ventanaActual = '';
+				}
+			});
+		}
+
+		function comprobarEmail(email){
+			console.log("Ventanas::comprobarEmail");
+			console.log(email);
+			
+			var patronEmail = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/i;
+			if (!patronEmail.test(email)) {
+				console.log('email no válido');
+				return false;
+			}else{
+				console.log('email válido');
+				return true;
+			}	
+		}
+		
+		return new Public;
+	}
+
+	return {
+		getInstance : function() {
+			console.log('Ventanas::getInstance');
+
+			if (!Instancia) {
+				Instancia = Singleton();
+			}
+
+			return Instancia;
+		}
+	}
+});

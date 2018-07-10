@@ -1,0 +1,423 @@
+define("app/Main", ["app/Servicios", "app/Interface", "app/Ventanas", "app/SecInicio", "app/SecVision", "app/SecCasos", "app/SecCaso", "app/SecServicios", "app/SecClientes", "app/SecNosotros", "app/SecBlog", "app/SecPost", "app/SecFiltro", "app/SecContacto", "app/SecCorporativo", "app/Cookies", "app/Sec404", "app/SecGracias", "tweenmax"], function(Servicios, Interface, Ventanas, SecInicio, SecVision, SecCasos, SecCaso, SecServicios, SecClientes, SecNosotros, SecBlog, SecPost, SecFiltro, SecContacto, SecCorporativo, Cookies, Sec404, SecGracias) {
+	//Comunes
+	var _servicios, _interface, _ventanas, _seccionQueMuestro, _objCompartir, _nombre;
+
+	var Instancia = function() {
+		var _that = this;
+
+		_that.init = function() {
+			console.log('Main::init');
+
+			_nombre = 'main';
+			_servicios = Servicios.getInstance();
+			
+			_interface = new Interface();
+			_interface.eventos.INTERFACE_PREPARADA.addOnce(interfaceIniciada);
+			_interface.init();
+
+			_cookies = new Cookies();
+			
+		}
+
+		$(document).ready(_that.init);
+	}
+	
+	
+	function interfaceIniciada(){
+		console.log("Main::interfaceIniciada");	
+		
+		_servicios.eventos.SERVICIOS_INICIADOS.addOnce(serviciosIniciados);
+		_servicios.init();
+	}
+	
+	function serviciosIniciados(){
+		console.log("Main::serviciosIniciados");
+		
+		_ventanas = new Ventanas.getInstance();
+		_ventanas.eventos.VENTANAS_PREPARADAS.addOnce(ventanasPreparadas);
+		_ventanas.init();
+	}
+	
+	function ventanasPreparadas(){
+		console.log("Main::ventanasPreparadas");	
+		
+		console.log("Main::****************FIN DEL FLUJO DE CARGA INICIAL*********************");
+
+		_interface.mostrarInterface();
+
+		abrirLaNuevaSeccion(_servicios.getSeccionActual());
+	}
+	
+	function abrirLaNuevaSeccion(seccion) {
+		console.log("Main::abrirLaNuevaSeccion::");
+		console.log(seccion);
+
+		switch (seccion) {
+			case "inicio":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecInicio();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_interface.activarBotonDeScroll();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "vision":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecVision();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_interface.activarBotonDeScroll();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "casos":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecCasos();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_interface.activarBotonDeScroll();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "caso":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecCaso();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.eventos.COMPARTIR_URL_FACEBOOK.add(_servicios.compartirUrlEnFacebook);
+				_seccionQueMuestro.eventos.COMPARTIR_URL_TWITTER.add(_servicios.compartirUrlEnTwitter);
+				_seccionQueMuestro.eventos.COMPARTIR_URL_GPLUS.add(_servicios.compartirUrlEnGplus);
+				_seccionQueMuestro.eventos.COMPARTIR_URL_LINKEDIN.add(_servicios.compartirUrlEnLinkedin);
+				
+				_seccionQueMuestro.init();
+				break;
+			case "servicios":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecServicios();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_interface.activarBotonDeScroll();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "clientes":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecClientes();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "nosotros":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecNosotros();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "blog":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecBlog();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+				_seccionQueMuestro.eventos.CARGAR_POSTS.add(function(datos){
+					_servicios.cargarPosts(datos);
+
+					_servicios.eventos.WS_POSTS_CARGADOS.addOnce(function(posts){
+						_seccionQueMuestro.postsCargados(posts);
+					});
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "post":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecPost();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+				_seccionQueMuestro.eventos.ENVIAR_COMENTARIO.add(function(datos){
+					console.log("Main::ENVIAR_COMENTARIO");
+
+					_servicios.guardarComentario(datos);
+					_servicios.eventos.WS_COMENTARIO_GUARDADO.addOnce(function(){
+						_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Gracias por dejar tu comentario.", mensaje: "Tenemos que revisarlo antes de publicarlo."});
+						_seccionQueMuestro.comentarioGuardado();
+					});
+				});
+				_seccionQueMuestro.eventos.ERROR_EN_COMENTARIO.add(function(campo){
+					switch(campo){
+						case "nombre":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Nos tienes que decir cómo te llamas."});
+							break;
+						case "email":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Nos tienes que dejar tu email."});
+							break;
+						case "texto":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "¿Seguro que no tienes nada que decir?"});
+							break;
+					}
+				});
+				_seccionQueMuestro.eventos.COMPARTIR_URL_FACEBOOK.add(_servicios.compartirUrlEnFacebook);
+				_seccionQueMuestro.eventos.COMPARTIR_URL_TWITTER.add(_servicios.compartirUrlEnTwitter);
+				_seccionQueMuestro.eventos.COMPARTIR_URL_GPLUS.add(_servicios.compartirUrlEnGplus);
+				_seccionQueMuestro.eventos.COMPARTIR_URL_LINKEDIN.add(_servicios.compartirUrlEnLinkedin);
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+				_seccionQueMuestro.init();
+				break;
+			case "filtro":
+			case "busqueda":
+			case "categoria":
+			case "tag":
+			case "autor":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecFiltro();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+				_seccionQueMuestro.eventos.CARGAR_POSTS.add(function(datos){
+					_servicios.cargarPosts(datos);
+
+					_servicios.eventos.WS_POSTS_CARGADOS.addOnce(function(posts){
+						_seccionQueMuestro.postsCargados(posts);
+					});
+				});
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+				_seccionQueMuestro.init();
+				break;
+			case "contacto":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecContacto();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+				_seccionQueMuestro.eventos.ENVIAR_MENSAJE.add(function(datos){
+					console.log("Main::ENVIAR_MENSAJE");
+					
+					_servicios.eventos.WS_MENSAJE_ENVIADO.addOnce(function(){
+						_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Muchas gracias por ponerte en contacto con nosotros.", mensaje: "Te responderemos tan pronto como nos sea posible."});
+						_seccionQueMuestro.mensajeEnviado();
+					});
+					_servicios.enviarMensaje(datos);
+				});
+				_seccionQueMuestro.eventos.ENVIAR_CV.add(function(datos, archivos){
+					console.log("Main::ENVIAR_CV");
+					
+					_servicios.eventos.WS_CV_ENVIADO.addOnce(function(){
+						_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Muchas gracias por compartir tu talento con nosotros.", mensaje: "En caso de que ser seleccionado, nos pondremos en contacto contigo."});
+						_seccionQueMuestro.cvEnviado();
+					});
+					_servicios.enviarCV(datos, archivos);
+				});
+				_seccionQueMuestro.eventos.ERROR_EN_FORMULARIO.add(function(campo){
+					switch(campo){
+						case "nombre":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Nos tienes que decir cómo te llamas."});
+							break;
+						case "email":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Nos tienes que dejar tu email."});
+							break;
+						case "mensaje":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "¿Seguro que no tienes nada que decir?"});
+							break;
+						case "puesto":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Tienes que decirnos el puesto al que optas."});
+							break;
+						case "politica":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Tienes que aceptar la política de privacidad."});
+							break;
+						case "lopd":
+							_ventanas.abrirVentana("ventana-mensaje-general", {titulo: "Algo ha pasado.", mensaje: "Tienes que aceptar el tratamiento de datos según la LOPD."});
+							break;
+					}
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "corporativo":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecNosotros();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();
+				break;
+			case "404":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new Sec404();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();				
+				break;
+			case "gracias":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new SecGracias();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();				
+				break;
+			case "politicaCookies":
+				console.log("Main::Cargo la sección "+seccion);
+				
+				_interface.mostrarCargando();
+				_seccionQueMuestro = new Sec404();
+				_seccionQueMuestro.eventos.SECCION_PREPARADA.addOnce(function() {
+					console.log("Main::SECCION_PREPARADA");
+					
+					_interface.ocultarCargando();
+					_seccionQueMuestro.mostrarSeccion();
+				});
+
+				_seccionQueMuestro.eventos.SECCION_MOSTRADA.addOnce(function(){
+					_cookies.init();
+				})
+
+				_seccionQueMuestro.init();				
+				break;
+			default:
+				console.log("No encuento la sección.");
+
+				break;
+		}
+	}
+	
+	return new Instancia;
+});

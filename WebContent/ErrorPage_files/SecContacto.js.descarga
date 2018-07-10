@@ -1,0 +1,411 @@
+define("app/SecContacto", ["signals", "app/Servicios", "app/PreloadIMG", "tools/GMapsApiLoader",  "tools/FullScreen", "tools/FormatText", "jquery"], function(signals, Servicios, PreloadIMG, GoogleMaps, FullScreen, FormatText) {
+
+    var _servicios;
+
+    var Instancia = function() {
+
+        var _that = this;
+        var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _mTotales, _bloqueoEnvioFormulario;
+
+        var _eventos = {
+            SECCION_PREPARADA : new signals.Signal(),
+            SECCION_MOSTRADA : new signals.Signal(),
+            SECCION_OCULTADA : new signals.Signal(),
+            ERROR_EN_FORMULARIO : new signals.Signal(),
+            ENVIAR_MENSAJE : new signals.Signal(),
+            ENVIAR_CV : new signals.Signal()
+        }
+
+        _that.eventos = _eventos; 
+        _that.get_nombre = _nombre;
+
+        _that.init = function() {
+            console.log("SecContacto::init");
+
+            _nombre = "contacto";
+            _seccionDOM = $("#contacto");
+            _servicios = Servicios.getInstance();
+            _formatear = new FormatText.getInstance();
+            _fullScreen = new FullScreen();
+
+            TweenMax.to(_seccionDOM, 0, {alpha: 0});
+
+            cargarImagenesIniciales();	
+        }
+
+        _that.dispose = function() {
+            console.log("SecContacto::Dispose::");
+
+            _eventos.SECCION_PREPARADA.removeAll();
+            _eventos.SECCION_MOSTRADA.removeAll();
+            _eventos.SECCION_OCULTADA.removeAll();
+            _eventos.ERROR_EN_FORMULARIO.removeAll();
+            _eventos.ENVIAR_CV.removeAll();
+        }
+
+        _that.mostrarSeccion = function() {
+            console.log("SecContacto::mostrarSeccion");
+
+            TweenMax.to(_seccionDOM, 1, {alpha: 1});
+        }
+
+        _that.ocultarSeccion = function() {
+            console.log("SecContacto::ocultarSeccion");
+
+            if(_seccionDOM){
+                _seccionDOM.fadeOut(500, function(){
+                    _seccionDOM.remove();
+                    _eventos.SECCION_OCULTADA.dispatch();
+                    _that.dispose();
+                });
+            }
+        }
+
+        _that.mensajeEnviado = function(){
+            mensajeEnviado();
+        }
+
+        _that.cvEnviado = function(){
+            cvEnviado();
+        }
+
+        function cargarImagenesIniciales(){
+            console.log("SecContacto::cargarImagenesIniciales");
+
+            //Añado al array de carga las imágenes del css...
+            var arrImagenes = new Array(
+                    );
+
+            //... y lo completo con las imágenes incluídas directamente en el DOM.
+            _seccionDOM.find("img").each(function(){
+                if($(this).attr("src").length > 0){
+                    arrImagenes.push($(this).attr("src"));
+                }
+            });
+
+            _preloadIMG = new PreloadIMG();
+            _preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+            _preloadIMG.init(arrImagenes, "contacto");
+        }
+
+        function imagenesInicialesCargadas() {
+            console.log("SecContacto::imagenesInicialesCargadas");
+
+            _preloadIMG.dispose();
+
+            _fullScreen.init(null, null, null, 550);
+            _fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+            redimensionar();
+
+            if(_servicios.getTipoDeDispositivo() == "pc"){
+                $.stellar({
+                    horizontalScrolling: false,
+                    verticalOffset: 0,
+                    responsive: true
+                });
+            }
+
+            _seccionDOM.find(".short-cuts #localizador, .short-cuts #escribenos, .short-cuts #talento").click(function(){
+                TweenMax.to($("html, body"), 1, {
+                    overwrite: 1,
+                    scrollTop: 350,
+                    ease: Quad.easeOut
+                });
+                cambiarSubseccion($(this).attr("id"));	
+            });
+
+            _seccionDOM.find("#form_contacto").submit(function(e){
+                e.preventDefault();
+
+                if(!_bloqueoEnvioFormulario){
+                    var nombre, email, mensaje, politica;
+
+                    nombre = _seccionDOM.find('#form_contacto input[name="nombre"]');
+                    email = _seccionDOM.find('#form_contacto input[name="mail"]');
+                    mensaje = _seccionDOM.find('#form_contacto textarea[name="mensaje"]');
+                    politica = _seccionDOM.find('#form_contacto input[name="ley1"]');
+
+                    if(!_formatear.comprobarEstandar(nombre.val())){
+                        nombre.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("nombre");
+                    }else if(!_formatear.comprobarEstandar(mensaje.val())){
+                        mensaje.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("mensaje");
+                    }else if(!_formatear.comprobarEmail(email.val())){
+                        email.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("email");
+                    }else if(!politica.is(":checked")){
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("politica");
+                    }else{
+                        _bloqueoEnvioFormulario = true;
+                        _eventos.ENVIAR_MENSAJE.dispatch({
+                            nombre : nombre.val(), 
+                            email : email.val(),
+                            mensaje : mensaje.val()
+                        });
+                    }
+                }
+            })
+
+            _seccionDOM.find("#form_solicitud").submit(function(e){
+                e.preventDefault();
+
+                if(!_bloqueoEnvioFormulario){
+                    var nombre, email, mensaje, puesto, archivos;
+
+                    nombre = _seccionDOM.find('#form_solicitud input[name="nombre"]');
+                    email = _seccionDOM.find('#form_solicitud input[name="mail"]');
+                    mensaje = _seccionDOM.find('#form_solicitud textarea[name="mensaje"]');
+                    puesto = _seccionDOM.find('#form_solicitud input[name="puesto"]');
+                    archivos = _seccionDOM.find("#form_solicitud #archivos")[0].files;
+                    politica = _seccionDOM.find('#form_solicitud input[name="ley1"]');
+                    lopd = _seccionDOM.find('#form_solicitud input[name="ley2"]');
+
+                    if(!_formatear.comprobarEstandar(nombre.val())){
+                        nombre.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("nombre");
+                    }else if(!_formatear.comprobarEmail(email.val())){
+                        email.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("email");
+                    }else if(!_formatear.comprobarEstandar(puesto.val())){
+                        puesto.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("puesto");
+                    }else if(!_formatear.comprobarEstandar(mensaje.val())){
+                        mensaje.addClass("error");
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("mensaje");
+                    }else if(!politica.is(":checked")){
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("politica");
+                    }else if(!lopd.is(":checked")){
+                        _eventos.ERROR_EN_FORMULARIO.dispatch("lopd");
+                    }else{
+                        _bloqueoEnvioFormulario = true;
+                        _eventos.ENVIAR_CV.dispatch({
+                            nombre : nombre.val(), 
+                            email : email.val(),
+                            mensaje : mensaje.val(),
+                            puesto : puesto.val()
+                        }, archivos);
+                    }
+                }
+            });
+
+
+            _seccionDOM.find("#form_contacto input, #form_contacto textarea").on("keyup change", function(){
+                var nombre, email, texto, puesto, campo;
+
+                campo = $(this);
+                nombre = _seccionDOM.find('#form_contacto input[name="nombre"]');
+                email = _seccionDOM.find('#form_contacto input[name="mail"]');
+                texto = _seccionDOM.find('#form_contacto textarea[name="mensaje"]');
+
+                if(campo.attr("name") == "mail"){
+                    if(_formatear.comprobarEmail(email.val())){
+                        campo.removeClass("error");	
+                    }else{
+                        //campo.addClass("error");	
+                    }
+                }else{
+                    if(_formatear.comprobarEstandar(campo.val())){
+                        campo.removeClass("error");	
+                    }else{
+                        //campo.addClass("error");
+                    }
+                }
+            });
+
+            _seccionDOM.find("#form_solicitud input, #form_solicitud textarea").on("keyup change", function(){
+                var nombre, email, texto, puesto, campo;
+
+                campo = $(this);
+                nombre = _seccionDOM.find('#form_solicitud input[name="nombre"]');
+                email = _seccionDOM.find('#form_solicitud input[name="mail"]');
+                texto = _seccionDOM.find('#form_solicitud textarea[name="mensaje"]');
+                puesto = _seccionDOM.find('#form_solicitud input[name="puesto"]');
+
+                if(campo.attr("name") == "mail"){
+                    if(_formatear.comprobarEmail(email.val())){
+                        campo.removeClass("error");	
+                    }else{
+                        //campo.addClass("error");	
+                    }
+                }else{
+                    if(_formatear.comprobarEstandar(campo.val())){
+                        campo.removeClass("error");	
+                    }else{
+                        //campo.addClass("error");
+                    }
+                }
+            });
+
+            _seccionDOM.find("#como_llegar").click(function(){
+                // var url = "https://www.google.es/maps/dir//101,+Calle+Pantoja+6,+28002+Madrid/@40.4473,-3.670208,17z/data=!4m13!1m4!3m3!1s0xd422917fbf15875:0x7fb2841252de29de!2s101!3b1!4m7!1m0!1m5!1m1!1s0xd422917fbf15875:0x7fb2841252de29de!2m2!1d-3.670208!2d40.4473";
+                var url = "https://www.google.es/maps/place/Calle+del+General+D%C3%ADaz+Porlier,+41,+28001+Madrid/@40.4283739,-3.6781315,18z/data=!3m1!4b1!4m5!3m4!1s0xd4228bbfa81ba53:0xe0a6c796cb39a3e5!8m2!3d40.4283739!4d-3.6770372";
+
+                window.open(url, "_blank");
+            });
+
+            iniciarMapa();
+        }
+
+        function mensajeEnviado(){
+            console.log("SecContacto::mensajeEnviado");
+
+            _bloqueoEnvioFormulario = false;
+            _seccionDOM.find('#form_contacto input[name="nombre"]').val("");		
+            _seccionDOM.find('#form_contacto input[name="mail"]').val("");
+            _seccionDOM.find('#form_contacto textarea[name="mensaje"]').val("");
+            _seccionDOM.find("#form_contacto input, #form_contacto textarea").removeClass("error");
+        }
+
+        function cvEnviado(){
+            console.log("SecContacto::cvEnviado");
+
+            _bloqueoEnvioFormulario = false;
+            _seccionDOM.find('#form_solicitud input[name="nombre"]').val("");		
+            _seccionDOM.find('#form_solicitud input[name="mail"]').val("");
+            _seccionDOM.find('#form_solicitud textarea[name="mensaje"]').val("");
+            _seccionDOM.find('#form_solicitud input[name="puesto"]').val("");
+            _seccionDOM.find('#form_solicitud input[name="ley1"]').prop('checked', false);
+            _seccionDOM.find('#form_solicitud input[name="ley2"]').prop('checked', false);
+            _seccionDOM.find("#form_solicitud input, #form_solicitud textarea").removeClass("error");
+        }
+
+
+        function iniciarMapa(){
+            console.log("SecContacto::iniciarMapa");
+
+            // PANTOJA
+            // var latitud = 40.4473;
+            // var longitud = -3.670208;
+            // GENERAL DÍAZ PORLIER
+            var latitud = 40.4283682;
+            var longitud = -3.6773155;
+
+            console.log(GoogleMaps);
+
+            if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad"){
+                var opciones = {
+                    zoom : 17,
+                    center : new GoogleMaps.LatLng(latitud, longitud),
+                    panControl: false,
+                    zoomControl: true,
+                    mapTypeControl: false,
+                    scaleControl: true,
+                    streetViewControl: false,
+                    overviewMapControl: false,
+                    scrollwheel: false
+                }
+            }else{
+                var opciones = {
+                    zoom : 17,
+                    center : new GoogleMaps.LatLng(latitud, longitud),
+                    panControl: false,
+                    zoomControl: false,
+                    mapTypeControl: false,
+                    scaleControl: true,
+                    streetViewControl: false,
+                    overviewMapControl: false,
+                    scrollwheel: false,
+                    draggable:false
+                }
+            }
+
+            var styles = [
+            {
+                stylers: [
+                { hue: "#00ffe6" },
+                { saturation: -20 }
+                ]
+            },{
+                featureType: "road",
+                elementType: "geometry",
+                stylers: [
+                { lightness: 100 },
+                { visibility: "simplified" }
+                ]
+            },{
+                featureType: "road",
+                elementType: "labels",
+                stylers: [
+                { visibility: "off" }
+                ]
+            }
+            ];
+
+            var infoWindow = new GoogleMaps.InfoWindow();
+
+            var map = new GoogleMaps.Map(
+                    document.getElementById('map-canvas'), 
+                    opciones
+                    );
+
+            map.setOptions({styles: styles});
+
+            var marcadorRincon = new GoogleMaps.Marker({
+                position: new GoogleMaps.LatLng(latitud, longitud),
+                map: map,
+                icon: _servicios.getBaseUrl()+"img/logo_mapa.png"
+            });
+
+            GoogleMaps.event.addListener(marcadorRincon, "click", function() {
+
+                var htmlVentana = '<div id="contenido"><p>[NOMBRE DEL RINCÓN]</p><a href="[URL DEL RINCÓN]" target="_blank"><div class="boton-llegar"></div></a></div>';
+
+                abrirVentanaConInformacion(marcadorRincon, htmlVentana);
+            });
+
+            cambiarSubseccion("localizador");
+
+            _eventos.SECCION_PREPARADA.dispatch();
+        }
+
+        function cambiarSubseccion(clave){
+            console.log("SecContacto::cambiarSubseccion");
+
+            var alto, posicion, puntero;
+            switch(clave){
+                case "localizador":
+                    alto = _seccionDOM.find(".informacion .mapa").innerHeight();
+                    puntero = _seccionDOM.find(".short-cuts #localizador").offset().left + (_seccionDOM.find(".short-cuts #localizador").innerWidth() / 2) - 12;;
+                    posicion = 0;
+                    break;
+                case "escribenos":
+                    alto = _seccionDOM.find(".informacion .escribenos").innerHeight();
+                    puntero = _seccionDOM.find(".short-cuts #escribenos").offset().left + (_seccionDOM.find(".short-cuts #escribenos").innerWidth() / 2) - 12;
+                    posicion = 1;
+                    break;
+                case "talento":
+                    alto = _seccionDOM.find(".informacion .talento").innerHeight();
+                    puntero = _seccionDOM.find(".short-cuts #talento").offset().left + (_seccionDOM.find(".short-cuts #talento").innerWidth() / 2) - 12;
+                    posicion = 2;
+                    break;
+            }
+
+            TweenMax.to(_seccionDOM.find(".informacion"), 1, {
+                overwrite: 1,
+                ease: Quad.easeOut,
+                height : alto,
+                left: (_mTotales.w * posicion) * -1
+            });
+
+            TweenMax.to(_seccionDOM.find(".short-cuts .marcador"), 1, {
+                overwrite: 1,
+                ease: Quad.easeOut,
+                left: puntero
+            });
+        }
+
+        function redimensionar(){
+            console.log("SecContacto::redimensionar");
+
+            _mTotales = _fullScreen.getAbsoluto();
+
+            _seccionDOM.find(".informacion").innerWidth(_mTotales.w * 3);
+            _seccionDOM.find(".informacion section").innerWidth(_mTotales.w);
+
+        }
+
+    }
+
+    return Instancia;
+});

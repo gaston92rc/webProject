@@ -1,0 +1,424 @@
+define("app/Interface", ["signals", "app/Servicios", "app/PreloadIMG", "app/PreloadDOM", "tools/FullScreen", "jquery", "tweenmax-scroll"], function(signals, Servicios, PreloadIMG, PreloadDOM, FullScreen) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		Controlar la interface
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 * 		Cargar las imágenes iniciales de la sección
+	 * 		Cargar el html de la sección
+	 *		Mostrar y ocultar la sección cuando sea necesario
+	 *
+	 */
+	
+	var _servicios;
+
+	var Instancia = function() {
+		var _that = this;
+		
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _mTotales;
+		
+		var _eventos = {
+			INTERFACE_PREPARADA : new signals.Signal(),
+			INTERFACE_MOSTRADA : new signals.Signal(),
+			INTERFACE_OCULTADA : new signals.Signal()
+		}
+	
+		_that.eventos = _eventos;
+		_that.getNombre = _nombre;
+				
+		_that.init = function() {
+			console.log('Interface::init');
+		
+			_nombre = 'interface';
+			_servicios = Servicios.getInstance();
+			_fullScreen = new FullScreen();
+			_seccionDOM = {};
+			_seccionDOM.logo = $(".logo");	
+			_seccionDOM.nav = $("nav");	
+			_seccionDOM.footer = $("footer");
+			_seccionDOM.cargador = $("#cargador");	
+			_seccionDOM.scroll = $(".scrollmouse");
+
+			cargarImagenesIniciales();
+		}
+
+		_that.dispose = function() {
+			console.log("Interface::Dispose::");
+			
+		}
+		
+		_that.mostrarInterface = function() {
+			console.log("Interface::mostrarSeccion");
+			
+			_seccionDOM.logo.fadeIn(500);
+			_seccionDOM.nav.fadeIn(500);
+			_seccionDOM.footer.fadeIn(500, function(){
+				_eventos.INTERFACE_MOSTRADA.dispatch();				
+			});
+		}
+
+		_that.ocultarInterface = function() {
+			console.log("Interface::ocultarSeccion");
+			
+			_seccionDOM.logo.fadeOut(500);
+			_seccionDOM.nav.fadeOut(500);
+			_seccionDOM.footer.fadeOut(500, function(){
+				_seccionDOM.remove();
+				_eventos.INTERFACE_OCULTADA.dispatch();
+				_that.dispose();			
+			});
+		}
+		
+		_that.mostrarCargando = function(){
+			_seccionDOM.cargador.fadeIn(500);	
+		}
+		
+		_that.ocultarCargando = function(){
+			//TweenMax.to(_seccionDOM.cargador, 1.4, {height:0, marginTop: window.innerHeight / 2, ease: Power3.easeInOut});	
+			_seccionDOM.cargador.delay(700).fadeOut(500, function(){
+				TweenMax.to(_seccionDOM.logo, .7, {left: 0, delay: .2, ease: Circ.easeOut});
+				TweenMax.to(_seccionDOM.nav.find(".boton"), .7, {right: 0, delay: .2, ease: Circ.easeOut});
+			});
+		}
+		
+		_that.actualizarMenu = function() {		
+			console.log(_nombre+"::actualizarMenu");		
+
+
+		}
+		
+		_that.activarBotonDeScroll = function(){
+			activarBotonDeScroll();
+		}
+
+		function cargarImagenesIniciales(){
+			console.log("Interface::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+				
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.nav.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+			_seccionDOM.footer.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "interface");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("Interface::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+	
+			_seccionDOM.nav.find("ul li[data-seccion='"+_servicios.getSeccionActual()+"']").addClass("sel");
+
+			_seccionDOM.nav.find("ul li").click(function(e){
+				e.stopPropagation();
+
+				if(_servicios.getSeccionActual() != $(this).attr("data-seccion")){
+					window.location = $(this).find("a").attr('href');
+					_seccionDOM.nav.find("ul li").removeClass("sel");
+					$(this).addClass("sel");
+				}
+			});;
+
+			_seccionDOM.nav.find(".boton").on("mouseover", function(){
+				TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(0), .2, {
+					overwrite: 1,
+					ease: Linear.easeNone,
+					top: 25,
+					rotation: 0,
+					alpha: 1
+				});
+				TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(2), .2, {
+					overwrite: 1,
+					ease: Linear.easeNone,
+					top: 7,
+					rotation: 0,
+					alpha: 1
+				});
+			});
+
+			_seccionDOM.nav.find(".boton").on("mouseout", function(){
+				if(_seccionDOM.nav.find(".boton").hasClass("cerrar")){
+					
+					TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(0), .2, {
+						overwrite: 1,
+						ease: Linear.easeNone,
+						rotation: 45
+					});
+					TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(2), .2, {
+						overwrite: 1,
+						ease: Linear.easeNone,
+						rotation: -45
+					});
+				}else{
+
+					TweenMax.to($(this).find(".barra"), .2, {
+						overwrite: 1,
+						ease: Linear.easeNone,
+						top: 16,
+						alpha: 1
+					});
+				}
+			});
+
+			_seccionDOM.nav.find(".boton").on("click", function(e){
+				if(_seccionDOM.nav.find(".boton").hasClass("cerrar")){
+					
+					cerrarMenu();
+
+					TweenMax.to(_seccionDOM.nav.find(".boton .barra"), .5, {
+						overwrite: 1,
+						ease: Quad.easeOut,
+						rotation: 0,
+						onComplete: function(){
+							TweenMax.to(_seccionDOM.nav.find(".boton .barra"), .2, {
+								alpha: 1,
+								top: 16
+							});
+							_seccionDOM.nav.find("ul").css({"display": "none"});
+							_seccionDOM.nav.css({"width": "auto"});
+						}
+					});
+
+					if(e.type == "click"){
+						_seccionDOM.nav.find(".boton").removeClass("cerrar").addClass("abrir");
+					}
+				}else{
+
+					abrirMenu();
+
+					_seccionDOM.nav.find("ul").css({"display": "block"});
+					_seccionDOM.nav.css({"width": "100%"});
+
+					TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(0), .2, {
+						overwrite: 1,
+						ease: Quad.easeOut,
+						top: 25,
+						onComplete: function(){
+							TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(0), .2, {
+								rotation: 45,
+							});
+						}
+					});
+					TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(1), .2, {
+						overwrite: 1,
+						alpha: 0
+					});
+					TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(2), .2, {
+						overwrite: 1,
+						ease: Quad.easeOut,
+						top: 7,
+						onComplete: function(){
+							TweenMax.to(_seccionDOM.nav.find(".boton .barra").eq(2), .2, {
+								rotation: -45,
+							});
+						}
+					});
+
+					if(e.type == "click"){
+						_seccionDOM.nav.find(".boton").removeClass("abrir").addClass("cerrar");
+					}
+				}
+			});
+
+			//Emulo el evento en el menú para iniciarlo.
+			_seccionDOM.nav.find(".boton").trigger('click');
+
+			_fullScreen.init(null, null, null, 550);
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			_eventos.INTERFACE_PREPARADA.dispatch();
+		}
+
+		function activarBotonDeScroll(){
+			console.log("Interface::activarBotonDeScroll");
+
+			var zona, zonaActivada, posicion, puntero, activacion;
+
+			_seccionDOM.scroll.show();
+			
+			_seccionDOM.scroll.click(function(){
+				zona = detectarZonaActual();
+				if(zona.posicion != "ultima"){
+					posicion = $(zona.elemento).next().position().top;
+					console.log(posicion);
+					TweenMax.to($(window), .6, {scrollTo:{y:posicion}, ease:Quad.easeInOut});
+				}
+			});
+
+			$(window).scroll(function(){
+				zona = detectarZonaActual();
+
+				if(zona.posicion == "primera"){
+					TweenMax.to(_seccionDOM.scroll, .2, {overwrite: 1, alpha: .8});		
+				}else if(zona.posicion == "central"){
+					//TweenMax.to(_seccionDOM.scroll, .1, {overwrite: 1, alpha: .1});
+					TweenMax.to(_seccionDOM.scroll, .1, {overwrite: 1, alpha: 0});
+				}else{
+					TweenMax.to(_seccionDOM.scroll, .2, {overwrite: 1, alpha: 0});
+				}
+			});
+
+			$(window).mousemove(function(e){
+				puntero = e.pageY - $(window).scrollTop();
+				activacion = _mTotales.h - (_mTotales.h / 6); 
+
+				if(puntero > activacion && !zonaActivada){
+
+					zonaActivada = true;
+					zona = detectarZonaActual();
+
+					if(zona.posicion != "ultima"){
+						TweenMax.to(_seccionDOM.scroll, .5, {overwrite: 1, alpha: 1});		
+					}else{
+						TweenMax.to(_seccionDOM.scroll, .5, {overwrite: 1, alpha: 0});
+					}
+
+				}else if(puntero < activacion && zonaActivada){
+
+					zonaActivada = false;
+					zona = detectarZonaActual();
+
+					if(zona.posicion == "primera"){
+						TweenMax.to(_seccionDOM.scroll, .5, {overwrite: 1, alpha: .8});		
+					}else if(zona.posicion == "central"){
+						TweenMax.to(_seccionDOM.scroll, .5, {overwrite: 1, alpha: .1});
+					}else{
+						TweenMax.to(_seccionDOM.scroll, .5, {overwrite: 1, alpha: 0});
+					}
+				}
+
+			});
+		}
+
+		function detectarZonaActual(){
+			var indice, elemento, posicion, posicion;
+
+			$("section").each(function(clave, elem){
+				posicion = $(elem).position().top;
+
+				if($(window).scrollTop() < 200){
+					indice = 0 ;
+					elemento = elem;
+					posicion = "primera";
+					return false;
+				}else{
+					if($(window).scrollTop() < (posicion + 200)){
+						indice = clave;
+						elemento = elem;
+
+						if(clave == $("section").length - 1){
+							posicion = "ultima";
+						}else{
+							posicion = "central";
+						}
+						return false;		
+					}
+				}
+			});
+
+			return {indice : indice, elemento : elemento, posicion: posicion};
+		}
+
+		function abrirMenu(){
+			console.log("Interface::abrirMenu");
+
+			TweenMax.to(_seccionDOM.nav.find(".boton"), .55, {
+				backgroundColor: "transparent"
+			});
+
+			TweenMax.to(_seccionDOM.nav.find("ul"), 1, {
+				alpha: 1,
+				ease: Quad.easeInOut,
+				onStart: function(){
+					_seccionDOM.nav.find("ul").show();
+					$("body").css({
+						"height" : "100%",
+						"overflow-y" : "hidden"
+					});
+					_seccionDOM.nav.css({
+						"height" : "100%",
+						"overflow-y": "scroll"
+					});
+				},
+				onComplete: function(){
+					
+				}
+			});
+			$.each(_seccionDOM.nav.find("ul li"), function(clave, valor){
+				TweenMax.to(valor, .6, {
+					ease: Quad.easeInOut,
+					delay: (_seccionDOM.nav.find("ul li").length - clave) * .05,
+					top: 0,
+					alpha: 1
+				});
+			});
+		}
+
+		function cerrarMenu(){
+			console.log("Interface::cerrarMenu");
+
+			TweenMax.to(_seccionDOM.nav.find(".boton"), .5, {
+				delay: 1,
+				backgroundColor: "rgba(51, 51, 51, .9)"
+			});
+			TweenMax.to(_seccionDOM.nav.find("ul"), 1, {
+				delay: .3,
+				alpha: 0,
+				ease: Quad.easeInOut,
+				onComplete: function(){
+					_seccionDOM.nav.find("ul").hide();
+					$("body").css({
+						"height" : "auto",
+						"overflow-y" : "visible"
+					});
+					_seccionDOM.nav.css({
+						"height" : "auto",
+						"overflow-y" : "hidden"
+					});
+				}
+			});
+			$.each(_seccionDOM.nav.find("ul li"), function(clave, valor){
+				TweenMax.to(valor, .3, {
+					ease: Quad.easeInOut,
+					delay: clave * .05,
+					top: -20,
+					alpha: 0
+				});
+			});
+		}
+
+		function redimensionar(){
+			console.log("SecInicio::redimensionar");
+
+			_mTotales = _fullScreen.getAbsoluto();
+		}
+	}
+
+	return Instancia;
+});
+
+
+
+
+
+
+
+
+
+

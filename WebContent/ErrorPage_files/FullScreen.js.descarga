@@ -1,0 +1,140 @@
+define("tools/FullScreen", ["signals"], function(signals) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+	
+	var Instancia = function() {
+		var _that = this;
+		var _objPantalla, _nombre, _elAnchoEsElDeLaPantalla, _elAltoEsElDeLaPantalla, _wMinimo, _hMinimo;
+		
+		var _eventos = {
+			MODULO_PREPARADO : new signals.Signal(),
+			CAMBIO_EN_FULLSCREEN : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.getNombre = _nombre;
+
+		_that.init = function(w, h, wMinimo, hMinimo) {
+			console.log("FullScreen::init::");
+			console.log(w+" "+h+" "+" "+wMinimo+" "+hMinimo);
+
+			_nombre='fullscreen';
+
+			ajustarMedidasDeReferencia(w, h, wMinimo, hMinimo);
+
+			window.addEventListener('resize', redimensionar);
+
+			_eventos.MODULO_PREPARADO.dispatch();
+		}
+
+		_that.dispose = function() {
+			console.log("FullScreen::Dispose");
+			
+			_eventos.MODULO_PREPARADO.removeAll();
+			_eventos.CAMBIO_EN_FULLSCREEN.removeAll();
+		}
+		
+		_that.getProporcional = function(w, h){
+			console.log("FullScreen::getProporcional");
+			
+			return calcularConservandoLasProporciones(w, h);
+		}
+
+		_that.getAbsoluto = function(){
+			console.log("FullScreen::getAbsoluto");
+
+			return _objPantalla;
+		}
+
+		_that.setPantalla = function(w, h, wMinimo, hMinimo){
+			console.log("FullScreen::setPantalla");
+
+			ajustarMedidasDeReferencia(w, h, wMinimo, hMinimo);
+		}
+
+		function ajustarMedidasDeReferencia(w, h, wMinimo, hMinimo){
+			console.log("FullScreen::ajustarMedidasDeReferencia");
+
+			if(!w){
+				w = window.innerWidth;
+				_elAnchoEsElDeLaPantalla = true;
+			}
+			if(!h){
+				h = window.innerHeight;	
+				_elAltoEsElDeLaPantalla = true;			
+			}
+			if(wMinimo){
+				_wMinimo = wMinimo;
+				_elAnchoEsElDeLaPantalla = false;
+			}
+			if(hMinimo){
+				_hMinimo = hMinimo;
+				_elAltoEsElDeLaPantalla = false;
+			}
+
+			_objPantalla = {
+				"w": w, 
+				"h": h
+			};
+
+			comprobarLimites();
+		}
+
+		function comprobarLimites(){
+			console.log("FullScreen::comprobarLimites");
+
+			if(_wMinimo && _objPantalla.w < _wMinimo){
+				_objPantalla.w = _wMinimo;
+			}
+			if(_hMinimo && _objPantalla.h < _hMinimo){
+				_objPantalla.h = _hMinimo;
+			}	
+		}
+
+		function calcularConservandoLasProporciones(w, h){
+			console.log("FullScreen::calcularConservandoLasProporciones");
+			console.log(_objPantalla);
+
+			var escala, wSalida, hSalida, wContenedor, hContenedor;
+
+			wContenedor = _objPantalla.w;
+			hContenedor = _objPantalla.h;
+
+			escala = wContenedor / w;
+
+			wSalida = w * escala;
+			hSalida = h * escala;
+
+			if(hSalida < hContenedor){
+				escala = hContenedor / h;
+
+				wSalida = w * escala;
+				hSalida = h * escala;
+			}
+
+			return {"w": wSalida, "h": hSalida, "scale": escala};
+		}
+
+		function redimensionar(){
+			console.log("FullScreen::redimensionar");
+
+			if(_elAnchoEsElDeLaPantalla){
+				_objPantalla.w = window.innerWidth;
+			}
+			if(_elAltoEsElDeLaPantalla || _hMinimo < window.innerWidth){
+				_objPantalla.h = window.innerHeight;
+			}
+			
+			_eventos.CAMBIO_EN_FULLSCREEN.dispatch();
+		}
+		
+	}
+
+	return Instancia;
+});

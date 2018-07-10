@@ -1,0 +1,73 @@
+define("app/PreloadDOM", ["signals", "jquery"], function(signals) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+
+	var Estaticas = {};
+	
+	var Instancia = function() {
+		var that = this;
+		
+		var Eventos = {
+			DOM_CARGADO : new signals.Signal(),
+			ERROR_AL_CARGAR_EL_DOM : new signals.Signal()
+		}
+		
+		that.eventos = Eventos; 
+		
+		that.init = function(url, parametros) {
+			//console.log("PreloadDOM::init");
+
+			/*
+			 _ajax = $.ajax({
+			 type : "GET",
+			 url : _url,
+			 data : parametros,
+			 dataType : "html",
+			 cache : false
+			 });
+
+			 _ajax.done(Private.DOMCargado);
+			 _ajax.fail(Private.ErrorAlCargarElDOM);
+			 */
+
+			$.ajax({
+				url : url,
+				dataType : "html",
+				data : parametros,
+				async: false, //Tiene que ser asíncrona porque al cargar varias secciones a la vez se solapan los callbacks,
+				success : function(respuesta) {
+					DOMCargado(respuesta);
+				},
+				error : function() {
+					ErrorAlCargarElDOM();
+				}
+			});
+		}
+
+		that.dispose = function() {
+			//console.log("PreloadDOM::Dispose::");
+			Eventos.DOM_CARGADO.removeAll();
+			Eventos.ERROR_AL_CARGAR_EL_DOM.removeAll();
+		}
+		
+		function DOMCargado(respuesta) {
+			//console.log("PreloadDOM::DOMCargado::");
+	
+			Eventos.DOM_CARGADO.dispatch(respuesta);
+		}
+	
+		function ErrorAlCargarElDOM(error) {
+			//console.log("PreloadDOM::ErrorAlCargarElDOM::");
+	
+			Eventos.ERROR_AL_CARGAR_EL_DOM.dispatch(error);
+		}
+	}
+
+	return Instancia;
+});

@@ -1,0 +1,99 @@
+define("tools/FormatText", ["signals", "jquery"], function(signals) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 */
+	
+	var Instancia;
+	var Singleton = function(){
+		
+		var _signal = signals.Signal;
+		var nombre;
+
+		var Eventos = {
+			MODULO_PREPARADO : new _signal()
+		}
+		
+		var Private = {};
+		var Public = function(){
+			var that = this;
+
+			that.eventos = Eventos;
+			that.getNombre = nombre;
+
+			that.init = function() {
+				console.log("FormatText::init");
+				
+				nombre = formattext;
+				Eventos.MODULO_PREPARADO.dispatch();
+			}
+		
+			that.dispose = function() {
+				console.log("FormatText::Dispose::");
+				
+				Eventos.MODULO_PREPARADO.removeAll();
+
+				_signal = null;
+			}
+
+			that.eliminarAcentos = function(texto){
+				var acentos = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç";
+				var original = "AAAAAEEEEIIIIOOOOUUUUaaaaaeeeeiiiioooouuuunncc";
+				for (var i=0; i<acentos.length; i++) {
+					if(texto){
+						texto = texto.replace(acentos.charAt(i), original.charAt(i));					
+					}
+				}
+				
+				return texto;
+			}
+
+			that.comprobarEmail = function(email){
+				console.log("FormatText::comprobarEmail");
+				console.log(email);
+				
+				var patronEmail = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/i;
+				if (!patronEmail.test(email)) {
+					console.log('email no válido');
+					return false;
+				}else{
+					console.log('email válido');
+					return true;
+				}	
+			}
+
+			that.comprobarEstandar = function(texto){
+				console.log("FormatText::comprobarEmail");
+
+				if(texto){
+					texto = texto.trim();
+
+					if(texto.length > 2){
+						return true;
+					}else{
+						return false;
+					}
+				}else{
+					return false;
+				}
+			}
+		}
+		
+		return new Public;
+	}
+	
+	return {
+	    getInstance: function (){
+	    	console.log('FormatText::getInstance');
+	    	if ( !Instancia ) {
+	        	Instancia = Singleton();
+	      	}
+	
+	      	return Instancia;
+	    }
+	}
+});

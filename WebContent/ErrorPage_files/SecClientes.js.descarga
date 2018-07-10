@@ -1,0 +1,132 @@
+
+define("app/SecClientes", ["signals", "app/Servicios", "app/PreloadIMG", "tools/FullScreen", "jquery", "jquery-stellar"], function(signals, Servicios, PreloadIMG, FullScreen) {
+
+    var _servicios;
+
+    var Instancia = function() {
+
+        var _that = this;
+        var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _mTotales;
+
+        var _eventos = {
+            SECCION_PREPARADA : new signals.Signal(),
+            SECCION_MOSTRADA : new signals.Signal(),
+            SECCION_OCULTADA : new signals.Signal()
+        }
+
+        _that.eventos = _eventos; 
+        _that.get_nombre = _nombre;
+
+        _that.init = function() {
+            console.log("SecClientes::init");
+
+            _nombre = "clientes";
+            _seccionDOM = $("#clientes");
+            _servicios = Servicios.getInstance();
+            _fullScreen = new FullScreen();
+
+            cargarImagenesIniciales();	
+        }
+
+        _that.dispose = function() {
+            console.log("SecClientes::Dispose::");
+
+            _eventos.SECCION_PREPARADA.removeAll();
+            _eventos.SECCION_MOSTRADA.removeAll();
+            _eventos.SECCION_OCULTADA.removeAll();
+        }
+
+        _that.mostrarSeccion = function() {
+            console.log("SecClientes::mostrarSeccion");
+
+            if(_seccionDOM){
+                _seccionDOM.fadeIn(500, function(){
+                    _eventos.SECCION_MOSTRADA.dispatch();				
+                });
+            }
+        }
+
+        _that.ocultarSeccion = function() {
+            console.log("SecClientes::ocultarSeccion");
+
+            if(_seccionDOM){
+                _seccionDOM.fadeOut(500, function(){
+                    _seccionDOM.remove();
+                    _eventos.SECCION_OCULTADA.dispatch();
+                    _that.dispose();
+                });
+            }
+        }
+
+        function cargarImagenesIniciales(){
+            console.log("SecClientes::cargarImagenesIniciales");
+
+            //Añado al array de carga las imágenes del css...
+            var arrImagenes = new Array(
+                    );
+
+            //... y lo completo con las imágenes incluídas directamente en el DOM.
+            _seccionDOM.find("img").each(function(){
+                if($(this).attr("src").length > 0){
+                    arrImagenes.push($(this).attr("src"));
+                }
+            });
+
+            _preloadIMG = new PreloadIMG();
+            _preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+            _preloadIMG.init(arrImagenes, "clientes");
+        }
+
+        function imagenesInicialesCargadas() {
+            console.log("SecClientes::imagenesInicialesCargadas");
+
+            _preloadIMG.dispose();
+
+            _fullScreen.init(null, null, null, 550);
+            _fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+            redimensionar();
+
+            if(_servicios.getTipoDeDispositivo() == "pc"){
+                $.stellar({
+                    horizontalScrolling: false,
+                    verticalOffset: 0,
+                    responsive: true
+                });
+            }
+
+            _eventos.SECCION_PREPARADA.dispatch();
+        }
+
+        function redimensionar(){
+            console.log("SecCaso::redimensionar");
+
+            var mCabecera, mPic;
+
+            _fullScreen.setPantalla();
+            mCabecera = _fullScreen.getProporcional(_seccionDOM.find("#destacado img").innerWidth(), _seccionDOM.find("#destacado img").innerHeight());
+            _mTotales = _fullScreen.getAbsoluto();
+
+            if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad"){
+                _seccionDOM.find("#destacado img").innerWidth(mCabecera.w);
+                _seccionDOM.find("#destacado img").innerHeight(mCabecera.h);
+
+                _seccionDOM.find("#destacado img").css({
+                    "top" : (_mTotales.h / 2) - (mCabecera.h / 2),
+                    "left" : (_mTotales.w / 2) - (mCabecera.w / 2)
+                });
+
+                _seccionDOM.find("section#cabecera").css('min-height', 400);
+
+                _seccionDOM.find(".box-text").each(function(clave, valor){
+                    $(this).css({
+                        "margin-top" : (_mTotales.h / 4) - ($(this).innerHeight() / 4) 
+                    });
+                });
+            }
+
+
+        }
+    }
+
+    return Instancia;
+});

@@ -1,0 +1,271 @@
+
+define("app/SecBlog", ["signals", "app/Servicios", "app/PreloadIMG", "tools/FullScreen", "masonry", "tweenmax", "jquery", "jquery-stellar"], function(signals, Servicios, PreloadIMG, FullScreen, Masonry) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 *
+	 *	MEJORAS
+	 *		...
+	 */
+
+	var _servicios;
+	
+	var Instancia = function() {
+
+		var _that = this;
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _bloqueoCargaDePost, _pagActual, _mTotales, _msnry;
+		
+		var _eventos = {
+			SECCION_PREPARADA : new signals.Signal(),
+			SECCION_MOSTRADA : new signals.Signal(),
+			SECCION_OCULTADA : new signals.Signal(),
+			CARGAR_POSTS : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.get_nombre = _nombre;
+		
+		_that.init = function() {
+			console.log("SecBlog::init");
+
+			_nombre = "blog";
+			_seccionDOM = $("#blog");
+			_servicios = Servicios.getInstance();
+			_fullScreen = new FullScreen();
+			_pagActual = 1;
+
+			cargarImagenesIniciales();	
+		}
+	
+		_that.dispose = function() {
+			console.log("SecBlog::Dispose::");
+			
+			_eventos.SECCION_PREPARADA.removeAll();
+			_eventos.SECCION_MOSTRADA.removeAll();
+			_eventos.SECCION_OCULTADA.removeAll();
+			_eventos.CARGAR_POSTS.removeAll();
+		}
+		
+		_that.mostrarSeccion = function() {
+			console.log("SecBlog::mostrarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeIn(500, function(){
+					_eventos.SECCION_MOSTRADA.dispatch();				
+				});
+			}
+		}
+
+		_that.ocultarSeccion = function() {
+			console.log("SecBlog::ocultarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeOut(500, function(){
+					_seccionDOM.remove();
+					_eventos.SECCION_OCULTADA.dispatch();
+					_that.dispose();
+				});
+			}
+		}
+		
+		_that.postsCargados = function(posts){
+			postsCargados(posts);
+		}
+
+		function cargarImagenesIniciales(){
+			console.log("SecBlog::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "blog");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("SecBlog::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+			
+			_fullScreen.init(null, null, null, 300);
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			if(_servicios.getTipoDeDispositivo() == "pc"){
+				$.stellar({
+					horizontalScrolling: false,
+					verticalOffset: 0,
+					responsive: true,
+					hideDistantElements: true,
+				});
+			}
+
+			_msnry = new Masonry(document.querySelector("#posts"), {
+			  	itemSelector: ".post",
+			  	transitionDuration: 0
+			});
+
+			$(window).scroll(function(){
+				if($(window).scrollTop() + $(window).height() > ($(document).height() - ($(window).height() / 1.5))) {
+       				cargarPost();
+   				}
+			});
+			
+			_seccionDOM.find("form#categoria select").change(function(){
+				var valor = $(this).val();
+
+				if(valor != ""){
+					location.href = $(this).parent().attr("action") + valor;
+					//$(this).parent().submit();
+				}
+			});
+
+			_eventos.SECCION_PREPARADA.dispatch();
+		}
+
+		function cargarPost(){
+			console.log("SecBlog::cargarPost");
+
+			if(!_bloqueoCargaDePost){
+				_bloqueoCargaDePost = true;
+				TweenMax.to(_seccionDOM.find(".cargando_posts"), .6, {alpha: 1});
+
+				_eventos.CARGAR_POSTS.dispatch({
+					"pagina" : _pagActual + 1
+				});
+			}	
+		}
+
+		function postsCargados(posts){
+			console.log("SecBlog::postsCargados");
+			console.log(posts);
+
+			var salida, post, categoria;
+
+			_pagActual += 1;
+
+			for(var clave in posts){
+				post = posts[clave];
+
+				salida = "";
+				if(post.format == "standard"){
+					salida += '<div class="post">';
+						
+					console.log(post);
+					if(post.imagen_destacada){
+						salida += '<a href="'+post.link+'" title="Leer el artículo completo">';
+						salida += '<img src="'+post.imagen_destacada.sizes.medium+'" alt="'+post.imagen_destacada.alt+'">';
+						salida += '</a>';
+					}
+					
+					salida += '<div class="post_datos">';
+					salida += '	<p><span class="fecha">'+post.date+'</span></p>';
+					salida += '	<a href="'+post.link+'" title="Leer el artículo completo" class="titulo"><h1>'+post.title+'</h1></a>';
+					salida += ' <p>'+post.excerpt+' <span class="ddd"><a href="'+post.link+'">[...]</a></span></p>';
+					salida += '	<p><span class="tags">';
+
+					for(var claveB in post.categorias){
+						categoria = post.categorias[claveB];
+
+						salida += ' <a href="filtro/categoria/'+categoria.slug+'" title="Ver todos los artículos de la categoría '+categoria.name+'">'+categoria.name+'</a>'
+						
+						if(claveB < post.categorias.length - 1){
+							salida += ',';
+						}
+					}
+
+					salida += ' </span></p>';
+					
+					 
+					salida += ' </div>'
+					salida += '</div>'
+					 
+				}else if(post.type == "quote"){
+					if(post.hasOwnProperty("autor_cita")){
+
+						salida += '<div class="post">';
+						salida += ' <div class="frases citas">';
+						salida += ' 	<span class="icono cita"></span>';
+						salida += '		<p>'+post.title+'</p>';
+						salida += '		<span class="autor">'+post.autor_cita+'</span>';
+						salida += ' </div>';
+						salida += '</div>';
+
+					}else{
+
+						salida += '<div class="post">';
+						salida += ' <div class="frases datos">';
+						salida += ' 	<span class="icono dato"></span>';
+						salida += '		<p>'+post.title+'</p>';
+						salida += ' </div>';
+						salida += '</div>';
+
+					}
+				}
+
+				_seccionDOM.find("#blog_listado .blog_articulos").append(salida);
+
+				_msnry.addItems(salida);
+				_msnry.reloadItems();
+				_msnry.layout();
+				
+			}
+
+			_bloqueoCargaDePost = false;
+			TweenMax.to(_seccionDOM.find(".cargando_posts"), .5, {alpha: 0});
+		}
+
+		function redimensionar(){
+			console.log("SecBlog::redimensionar");
+
+			var mDestacado;
+
+			_fullScreen.setPantalla(window.innerWidth, window.innerHeight / 2, null, 300);
+			_mTotales = _fullScreen.getAbsoluto();
+
+			_seccionDOM.find("#cabecera").innerWidth(_mTotales.w);
+			_seccionDOM.find("#cabecera").innerHeight(_mTotales.h);
+			_seccionDOM.find("#cabecera").innerWidth(_mTotales.w);
+
+			_fullScreen.setPantalla(window.innerWidth / 2, _seccionDOM.find(".blog_articulo_destacado .post").innerHeight(), null, 300);
+			_mTotales = _fullScreen.getAbsoluto();
+
+			_seccionDOM.find("#post_destacado").innerHeight(_mTotales.h);	
+
+			_fullScreen.setPantalla(_mTotales.w, _seccionDOM.find(".blog_articulo_destacado .post").innerHeight());
+			mDestacado = _fullScreen.getProporcional(_seccionDOM.find("#post_destacado img").innerWidth(), _seccionDOM.find("#post_destacado img").innerHeight());
+
+			if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad"){
+				_seccionDOM.find("#post_destacado img").innerHeight(mDestacado.h);
+				_seccionDOM.find("#post_destacado img").innerWidth(mDestacado.w);		
+			}
+			
+ 			_seccionDOM.find("#post_destacado img").css({
+ 				"top" : 0,
+ 				//"left" : (_mTotales.w / 4) - (_seccionDOM.find("#post_destacado img").innerWidth() / 2)
+ 			});
+
+			_seccionDOM.find(".box-text").each(function(clave, valor){
+				$(this).css({
+					"margin-top" : ($(this).parent().innerHeight() / 2) - ($(this).innerHeight() / 2) 
+				});
+			});
+		}
+		
+	}
+	
+	return Instancia;
+});

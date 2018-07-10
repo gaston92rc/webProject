@@ -1,0 +1,230 @@
+
+define("app/SecServicios", ["signals", "app/Servicios", "app/PreloadIMG", "tools/FullScreen", "tweenmax", "jquery", "jquery-stellar"], function(signals, Servicios, PreloadIMG, FullScreen) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		...
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 *
+	 *	MEJORAS
+	 *		...
+	 */
+
+	var _servicios;
+	
+	var Instancia = function() {
+
+		var _that = this;
+		var _preloadIMG, _preloadDOM, _seccionDOM, _nombre, _mTotales;
+		
+		var _eventos = {
+			SECCION_PREPARADA : new signals.Signal(),
+			SECCION_MOSTRADA : new signals.Signal(),
+			SECCION_OCULTADA : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.get_nombre = _nombre;
+		
+		_that.init = function() {
+			console.log("SecServicios::init");
+
+			_nombre = "servicios";
+			_seccionDOM = $("#servicios");
+			_servicios = Servicios.getInstance();
+			_fullScreen = new FullScreen();
+
+			cargarImagenesIniciales();	
+		}
+	
+		_that.dispose = function() {
+			console.log("SecServicios::Dispose::");
+			
+			_eventos.SECCION_PREPARADA.removeAll();
+			_eventos.SECCION_MOSTRADA.removeAll();
+			_eventos.SECCION_OCULTADA.removeAll();
+		}
+		
+		_that.mostrarSeccion = function() {
+			console.log("SecServicios::mostrarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeIn(500, function(){
+					_eventos.SECCION_MOSTRADA.dispatch();				
+				});
+			}
+		}
+
+		_that.ocultarSeccion = function() {
+			console.log("SecServicios::ocultarSeccion");
+			
+			if(_seccionDOM){
+				_seccionDOM.fadeOut(500, function(){
+					_seccionDOM.remove();
+					_eventos.SECCION_OCULTADA.dispatch();
+					_that.dispose();
+				});
+			}
+		}
+		
+		function cargarImagenesIniciales(){
+			console.log("SecServicios::cargarImagenesIniciales");
+
+			//Añado al array de carga las imágenes del css...
+			var arrImagenes = new Array(
+			);
+
+			//... y lo completo con las imágenes incluídas directamente en el DOM.
+			_seccionDOM.find("img").each(function(){
+				if($(this).attr("src").length > 0){
+					arrImagenes.push($(this).attr("src"));
+				}
+			});
+
+			_preloadIMG = new PreloadIMG();
+			_preloadIMG.eventos.IMAGENES_CARGADAS.addOnce(imagenesInicialesCargadas);
+			_preloadIMG.init(arrImagenes, "servicios");
+		}
+
+		function imagenesInicialesCargadas() {
+			console.log("SecServicios::imagenesInicialesCargadas");
+	
+			_preloadIMG.dispose();
+			
+			_fullScreen.init(null, null, null, 550);
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			if(_servicios.getTipoDeDispositivo() == "pc"){
+				$.stellar({
+					horizontalScrolling: false,
+					verticalOffset: 0,
+					responsive: true
+				});
+			}
+
+			if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad" && _seccionDOM.innerWidth() > 800){
+				_seccionDOM.find(".servicio").innerHeight(_seccionDOM.find(".servicio h2").innerHeight() + 40);
+			}else if(_servicios.getTipoDeDispositivo() == "tablet-ipad" && _seccionDOM.innerWidth() < 800){
+				_seccionDOM.find(".servicio").innerHeight(_seccionDOM.find(".servicio h2").innerHeight() + 25);
+			}else{
+				//_seccionDOM.find(".servicio").innerHeight(_seccionDOM.find(".servicio h2").innerHeight() + 20);
+				var items = _seccionDOM.find(".servicio");
+				console.log(items);
+				$.each(items, function(key, value){
+					console.log($(value).children("h2").innerHeight());
+					$(value).innerHeight($(value).children("h2").innerHeight()+20);
+				});
+			}
+
+			
+
+			_seccionDOM.find(".servicio h2 a").click(function(e){
+				e.preventDefault();
+
+				var servicioDOM = $(this).parents(".servicio");
+				var servicio = $(this).parents(".servicio").attr("id");
+
+				if(_servicios.getTipoDeDispositivo() == "pc" || _servicios.getTipoDeDispositivo() == "tablet-ipad" && _seccionDOM.innerWidth() > 800){
+					if(servicioDOM.innerHeight() > (_seccionDOM.find(".servicio h2").innerHeight() + 40)){
+						TweenMax.to($("#"+servicio), .5, {
+							height: (_seccionDOM.find(".servicio h2").innerHeight() + 40)
+						});
+						TweenMax.to($("#"+servicio+" h2"), .5, {
+							marginBottom: "1em"
+						});
+					}else{
+						TweenMax.to($("html, body"), 1, {
+							overwrite: 1,
+							scrollTop: (servicioDOM.parents("section").position().top + _seccionDOM.find("#"+servicio).position().top) - 20,
+							ease: Quad.easeOut
+						});
+
+						TweenMax.to($("#"+servicio), .5, {
+							height: $("#"+servicio+" ul").innerHeight() + 120
+						});
+
+						TweenMax.to($("#"+servicio+" h2"), 1, {
+							marginBottom: ".7em"
+						});
+					}
+				}else if(_servicios.getTipoDeDispositivo() == "tablet-ipad" && _seccionDOM.innerWidth() < 800){
+					if(servicioDOM.innerHeight() > (_seccionDOM.find(".servicio h2").innerHeight() + 40)){
+						TweenMax.to($("#"+servicio), .5, {
+							height: ($(this).parent().innerHeight() + 25)
+						});
+						TweenMax.to($("#"+servicio+" h2"), .5, {
+							marginBottom: "1em"
+						});
+					}else{
+						TweenMax.to($("html, body"), 1, {
+							overwrite: 1,
+							scrollTop: (servicioDOM.parents("section").position().top + _seccionDOM.find("#"+servicio).position().top) - 20,
+							ease: Quad.easeOut
+						});
+
+						TweenMax.to($("#"+servicio), .5, {
+							height: $("#"+servicio+" ul").innerHeight() + 120
+						});
+
+						TweenMax.to($("#"+servicio+" h2"), 1, {
+							marginBottom: ".7em"
+						});
+					}
+				}else{
+					if(servicioDOM.innerHeight() > (_seccionDOM.find(".servicio h2").innerHeight() + 20)){
+						TweenMax.to($("#"+servicio), .5, {
+							height: ($(this).parent().innerHeight() + 20)
+						});
+						TweenMax.to($("#"+servicio+" h2"), .5, {
+							marginBottom: "1em"
+						});
+					}else{
+						TweenMax.to($("html, body"), 1, {
+							overwrite: 1,
+							scrollTop: (servicioDOM.parents("section").position().top + _seccionDOM.find("#"+servicio).position().top) - 80,
+							ease: Quad.easeOut
+						});
+
+						TweenMax.to($("#"+servicio), .5, {
+							height: $("#"+servicio+" ul").innerHeight() + 60
+						});
+
+						TweenMax.to($("#"+servicio+" h2"), 1, {
+							marginBottom: ".7em"
+						});
+					}
+				}				
+				
+			});
+
+			_eventos.SECCION_PREPARADA.dispatch();
+		}
+
+		function redimensionar(){
+			console.log("SecServicios::redimensionar");
+
+			_mTotales = _fullScreen.getAbsoluto();
+
+			if(_seccionDOM.innerWidth() > 768){
+				_seccionDOM.find("#cabecera").innerWidth(_mTotales.w);
+				_seccionDOM.find("#cabecera").innerHeight(_mTotales.h);
+						
+				_seccionDOM.find(".box-text").each(function(clave, valor){
+					console.log($(this).parent().attr("id"));
+					console.log(_mTotales.h / 2);
+					console.log($(this).innerHeight() / 2);
+
+					$(this).css({
+						"margin-top" : (_mTotales.h / 2) - ($(this).innerHeight() / 2) 
+					});
+				});
+			}
+		}
+		
+	}
+	
+	return Instancia;
+});

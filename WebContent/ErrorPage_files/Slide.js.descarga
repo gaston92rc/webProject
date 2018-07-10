@@ -1,0 +1,307 @@
+	define("plugins/Slide", ["signals", "app/PreloadIMG", "tools/FullScreen", "tweenmax", "jquery"], function(signals, PreloadIMG, FullScreen) {
+
+	/*
+	 * 	FUNCIONALIDAD PRINCIPAL DEL MÓDULO
+	 * 		Controlador para los pases de diapositivas. Por ahora solo acepta imágenes y texto.
+	 *		El módulo espera recibir en el constructor el id del slide.
+	 *		Las diapositivas se crean directamente en la maqueta y son objetos del tipo: 
+	 *			<div class="frame">
+	 *				<img src="" alt=""/>
+	 *			</div>
+	 *		Los estilos están en un archivo slide.less aparte.
+	 *
+	 * 	OTRAS FUNCIONALIDADES
+	 *		...
+	 *
+	 *	MEJORAS
+	 *		Desactivar las animaciones cuando es dispositivo móvil.
+	 *		Cambiar la forma de navegar entre diapositivas cuando es móvil, para que sea más usable.
+	 *		Soporte para vídeos de youtube, vimeo, html5.
+	 *		Incorporar texto con animaciones en las diapositivas.
+	 *		Añadir más animaciones para las imágenes.
+	 */
+	
+	var Instancia = function() {
+		var _that = this;
+		
+		var _nombre, _slideDOM, _duracion, _imgActual, _bmpAnimacion, _listenerTicker, _timerSlide, _pauseSlide, _frameActual, _fullScreen, _preloadIMG, _mTotales, _posXTouch, _posXMove, _posSlideActual, _tipoDeDispositivo, _bloqueoSlide;
+		
+		var _eventos = {
+			MODULO_PREPARADO : new signals.Signal()
+		}
+		
+		_that.eventos = _eventos; 
+		_that.getNombre = _nombre;
+
+		_that.init = function(DOM, duracion, ancho, alto, dispositivo) {
+			console.log("Slide::init::");
+			
+			_nombre='slide';
+			_tipoDeDispositivo = dispositivo;
+			_imgActual = 0;
+			_pauseSlide = 0;
+			_slideDOM = DOM;
+			_duracion = duracion;
+			_preloadIMG = new PreloadIMG();
+			_fullScreen = new FullScreen();
+
+			_preloadIMG.init([], "slide");
+			_fullScreen.init(ancho, alto);
+			
+			configurarSlide();
+		}
+
+		_that.dispose = function() {
+			console.log("Slide::Dispose");
+			
+			_eventos.MODULO_PREPARADO.removeAll();
+
+			clearInterval(_timerSlide);
+		}
+		
+		_that.pause = function(){
+			console.log("Slide::pausa");
+			
+			_pauseSlide = _duracion * 5;
+		}
+
+		_that.play = function(){
+			console.log("Slide::play");
+
+			/*
+			if(!_timerSlide){
+				_timerSlide = setInterval(function(){
+					if(_pauseSlide < 1){
+						_pauseSlide = _duracion;
+						cambiarImagen("siguiente");
+					}else{
+						_pauseSlide--;
+					}
+				}, 1000);
+			}
+			*/
+		}
+		
+		function configurarSlide(){
+			console.log("Slide::iniciarCanvas");
+
+			_imgActual = Math.floor((Math.random() * (_slideDOM.find(".frames li").length - 1)) + 0);
+
+			if(_tipoDeDispositivo == "pc"){
+				_slideDOM.find(".left").click(function(){
+					_pauseSlide = _duracion * 3;
+					cambiarImagen("anterior");
+				});
+				_slideDOM.find(".right").click(function(){
+					_pauseSlide = _duracion * 3;
+					cambiarImagen("siguiente");
+				});
+
+				_slideDOM.find(".right").show();
+				_slideDOM.find(".left").show();
+			}else{
+				_slideDOM.find(".right").hide();
+				_slideDOM.find(".left").hide();
+			}
+
+			_slideDOM.find(".points li").click(function(){
+				_pauseSlide = _duracion * 3;
+				cambiarImagen($(this).index());
+			});
+
+			_slideDOM.on("touchstart", function(e){
+				console.log("mousedown");
+
+				setTimeout(function(){
+					_posXTouch = e.originalEvent.touches[0].pageX;
+					_posSlideActual = _slideDOM.find(".frames").position().left;
+					_bloqueoSlide = false;
+				}, 50);
+			});
+
+			_slideDOM.on("touchmove", function(e){
+
+				if(_posXTouch && !_bloqueoSlide){
+					var posSlideActual, posXActual, diferencia, direccion;
+
+					e.preventDefault();
+
+					if(!_posXMove){
+						_posXMove = _posXTouch;
+					}
+
+					posXActual = e.originalEvent.touches[0].pageX;
+					diferencia = Math.abs(posXActual - _posXMove);
+
+					if(_posXMove < posXActual){
+						_posSlideActual = _posSlideActual + diferencia;
+						direccion = "anterior";						
+					}else{
+						_posSlideActual = _posSlideActual - diferencia;
+						direccion = "siguiente";
+					}
+
+					if(Math.abs(posXActual - _posXTouch) > 150){
+						_bloqueoSlide = true;
+						_posXMove = null;
+						_posXTouch = null;
+						cambiarImagen(direccion);
+					}else{
+						TweenMax.to(_slideDOM.find(".frames"), .5, {
+							overwrite: 1,
+							left: _posSlideActual
+						});
+
+						_posXMove = posXActual;
+					}
+				}
+			});
+
+			_slideDOM.on("touchend", function(e){
+				console.log("mouseUp");
+				var posXActual, direccion, imgActualDOM;
+
+				_posXMove = null;
+				_posXTouch = null;
+
+				cambiarImagen(_imgActual);
+			});
+
+			_slideDOM.mousemove(function(e){
+				if((e.clientX - _slideDOM.offset().left) > (_mTotales.w - (_mTotales.w / 4))){
+					TweenMax.to(_slideDOM.find(".right"), 1, {alpha:1});
+				}else if((e.clientX - _slideDOM.offset().left)< (_mTotales.w / 4)){
+					TweenMax.to(_slideDOM.find(".left"), 1, {alpha:1});
+				}else{
+					TweenMax.to(_slideDOM.find(".right"), 1, {alpha:0});
+					TweenMax.to(_slideDOM.find(".left"), 1, {alpha:0});
+				}
+			});
+
+			_slideDOM.mouseout(function(e){
+				TweenMax.to(_slideDOM.find(".right"), 1, {alpha:0});
+				TweenMax.to(_slideDOM.find(".left"), 1, {alpha:0});
+			});
+
+			_fullScreen.eventos.CAMBIO_EN_FULLSCREEN.add(redimensionar);
+			redimensionar();
+
+			cambiarImagen("siguiente");
+
+			_eventos.MODULO_PREPARADO.dispatch();
+		}
+
+		function cambiarImagen(posicion){
+			console.log("Slide::cambiarImagen");
+
+			var imgNueva, mCabecera, imgNuevaDOM, imgActualDOM, pointPrecarga, timeSlide;
+
+			if(posicion == "siguiente"){
+				if(_imgActual == _slideDOM.find(".frames li").length - 1){
+					imgNueva = 0;
+				}else{
+					imgNueva = _imgActual + 1;
+				}
+			}else if(posicion == "anterior"){
+				if(_imgActual == 0){
+					imgNueva = _slideDOM.find(".frames li").length - 1;
+				}else{
+					imgNueva = _imgActual - 1;
+				}
+			}else{
+				imgNueva = posicion;
+			}
+			
+			if(_tipoDeDispositivo == "pc"){
+				timeSlide = 1;
+			}else{
+				timeSlide = .5;
+			}
+
+			imgActualDOM = _slideDOM.find(".frames li").eq(_imgActual);
+			imgNuevaDOM = _slideDOM.find(".frames li").eq(imgNueva);
+			pointPrecarga = _slideDOM.find(".points li").eq(imgNueva);
+
+			_slideDOM.find(".points li").removeClass("select");
+			pointPrecarga.addClass("select");
+
+			//imgActualDOM.fadeOut(500);
+
+			if(!_preloadIMG.comprobarImagenCargada(imgNuevaDOM.find("img").attr("src"))){
+
+				TweenMax.to(_slideDOM.find(".frames"), timeSlide, {
+					overwrite: 1,
+					ease: Quad.easeOut,
+					left: (_mTotales.w * imgNuevaDOM.index()) * -1
+				});
+
+				TweenMax.to(pointPrecarga, timeSlide / 2, {
+					repeat: -1,
+					yoyo: true,
+					alpha: .3
+				});
+
+				_preloadIMG.eventos.IMAGEN_CARGADA.removeAll();
+				_preloadIMG.eventos.IMAGEN_CARGADA.addOnce(function(objImagen){
+
+					mCabecera = _fullScreen.getProporcional(objImagen.width, objImagen.height);
+
+					//imgNuevaDOM.find("img").innerWidth(mCabecera.w);
+					//imgNuevaDOM.find("img").innerHeight(mCabecera.h);
+
+					//imgNuevaDOM.fadeIn(800);
+					TweenMax.to(pointPrecarga, timeSlide / 4, {
+						overwrite: 1,
+						alpha:1
+					});
+				});
+				_preloadIMG.aniadirImagenes([imgNuevaDOM.find("img").attr("src")]);
+
+			}else{
+
+				TweenMax.to(_slideDOM.find(".frames"), timeSlide, {
+					overwrite: 1,
+					ease: Quad.easeOut,
+					left: (_mTotales.w * imgNuevaDOM.index()) * -1
+				});
+
+				TweenMax.to(pointPrecarga, timeSlide / 4, {
+					overwrite: 1,
+					alpha:1
+				});
+			}
+
+			_imgActual = imgNueva;
+		}
+
+		function redimensionar(){
+			console.log("Slide::redimensionar");
+
+
+			if(_mTotales){
+				if(_mTotales.h == "auto"){
+					_fullScreen.setPantalla(_slideDOM.parent().innerWidth(), "auto");
+				}else{
+					_fullScreen.setPantalla(_slideDOM.parent().innerWidth(), _slideDOM.parent().innerHeight());
+				}
+			}
+
+			_mTotales = _fullScreen.getAbsoluto();
+			
+			_slideDOM.find(".frames li").innerWidth(_mTotales.w);
+			_slideDOM.find(".frames li").innerHeight(_mTotales.h);
+			_slideDOM.find(".frames").innerWidth(_mTotales.w * _slideDOM.find(".frames li").length);
+			
+ 			_slideDOM.find(".left, .right").css({
+ 				"top": (_slideDOM.find(".frames li").innerHeight() / 2) - (_slideDOM.find(".left").innerHeight() / 2)
+ 			});
+ 			_slideDOM.find(".points").css({
+ 				"left": (_slideDOM.find(".frames li").innerWidth() / 2) - (_slideDOM.find(".points").innerWidth() / 2)
+ 			});
+
+ 			cambiarImagen(_imgActual);
+		}
+	}
+	
+	return Instancia;
+});
