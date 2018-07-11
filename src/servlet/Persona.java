@@ -27,7 +27,7 @@ public class Persona extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// TODO Auto-generated method stub
-		response.getWriter().append("get:");
+		response.sendRedirect("/WebExample/ErrorPage.html");
 	}
 
 	/**
@@ -48,7 +48,7 @@ public class Persona extends HttpServlet {
 				this.modificacion(request,response);
 				break;
 				
-			case "/consultas":
+			case "/consulta":
 				this.consulta(request,response);
 				break;
 
@@ -60,7 +60,7 @@ public class Persona extends HttpServlet {
 
 		private void error(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 			response.setStatus(404);
-			request.getRequestDispatcher("WebContent/ErrorPage.html").forward(request, response);
+			response.sendRedirect("/../ErrorPage.html");
 		}
 
 		private void consulta(HttpServletRequest request, HttpServletResponse response) throws IOException {

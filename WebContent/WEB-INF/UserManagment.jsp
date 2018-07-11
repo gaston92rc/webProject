@@ -31,7 +31,7 @@
 <script type="text/javascript">
 	function submitForm(met) {
 		document.myForm.action = met;
-// 		document.getElementById("myForm").submit();
+		document.getElementById("myForm").submit();
 	}
 </script>
 

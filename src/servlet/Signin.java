@@ -7,8 +7,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.tomcat.jni.Time;
+
 import business.SigninControler;
 import entities.User;
+import helpers.LoginHelper;
 
 /**
  * Servlet implementation class Test
@@ -29,7 +32,7 @@ public class Signin extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+//		 TODO Auto-generated method stub
 		response.getWriter().append("Served at: ").append(request.getContextPath());
 	}
 
@@ -37,21 +40,26 @@ public class Signin extends HttpServlet {
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		System.out.println("ESTOY EN EL POST DE SIGNIN");
-		
 		SigninControler ctrl = new SigninControler();
 		String email = request.getParameter("email");
 		String password = request.getParameter("password");
-		System.out.println("Usuario: "+email+"/nContraseña: "+password);
 		
 		User u = new User();
+		u.setUsuario(LoginHelper.getUserByEmail(email));
 		u.setEmail(email);
 		u.setPassword(password);
+		System.out.println("El usuario: "+u.getUsuario()+" esta intentando loguearse");
 		u=ctrl.getUser(u);
 		
 		request.getSession().setAttribute("usuario", u);
-		request.getRequestDispatcher("WEB-INF/UserManagment.jsp").forward(request, response);
-//		
+		if(u!=null){
+			System.out.println("El usuario: "+u.getUsuario()+" fue logueado");
+			request.getRequestDispatcher("WEB-INF/UserManagment.jsp").forward(request, response);
+		}else{
+			System.out.println("Usuario Invalido");
+		}
+		
+		
 		
 	}
 

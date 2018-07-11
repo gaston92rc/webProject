@@ -6,10 +6,11 @@ import java.util.List;
 import com.sun.org.apache.xml.internal.security.utils.HelperNodeList;
 
 import entities.User;
+import helpers.LoginHelper;
 
 public class SigninControler {
 	static String email = "gaston92.rc@hotmail.com";
-	static String user = helpers.LoginHelper.getUserByEmail(email);
+	static String user = LoginHelper.getUserByEmail(email);
 	
 	public static List<User> mockUser = new ArrayList<User>(){
 		{
