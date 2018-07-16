@@ -60,7 +60,7 @@ public class Persona extends HttpServlet {
 
 		private void error(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 			response.setStatus(404);
-			response.sendRedirect("/../ErrorPage.html");
+//			response.sendRedirect("/WebContent/ErrorPage.html");
 		}
 
 		private void consulta(HttpServletRequest request, HttpServletResponse response) throws IOException {

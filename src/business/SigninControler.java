@@ -3,18 +3,17 @@ package business;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sun.org.apache.xml.internal.security.utils.HelperNodeList;
-
 import entities.User;
 import helpers.LoginHelper;
 
 public class SigninControler {
-	static String email = "gaston92.rc@hotmail.com";
+	static String email = "gaston@cuesta.com";
 	static String user = LoginHelper.getUserByEmail(email);
+	static String pass = "123";
 	
 	public static List<User> mockUser = new ArrayList<User>(){
 		{
-			add(new User(user,email,"123456"));
+			add(new User(user,email,pass));
 		}
 	};
 	

@@ -11,17 +11,14 @@
 <link rel="icon"
 	href="http://www.iconeasy.com/icon/png/Game/Super%20Mario%201/Retro%20Mushroom%20Super%202.png">
 
-<title>Play WebIntro!</title>
+<title>Login</title>
 
-<!-- Bootstrap core CSS -->
-<link href="style/bootstrap.css" rel="stylesheet">
-
-<!-- Custom styles for this template -->
-<link href="style/start.css" rel="stylesheet">
-
-<!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
-<!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
-<script src="style/ie-emulation-modes-warning.js"></script>
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script
+	src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
 <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
 <!--[if lt IE 9]>
@@ -37,24 +34,37 @@
 
 </head>
 
-	<body>
-		<div class="container">
-			<form class="form-signin" id="myForm" name="myForm" action="" method="post">
-		        <h2 class="form-signin-heading">Login</h2>
-		        <label for="inputEmail" class="sr-only">User</label>
-		        <input email="email" id="inputEmail" class="form-control" placeholder="email" required="" autofocus="" type="">
-		        <label for="inputUsername" class="sr-only">User</label>
-		        <input name="username" id="inputUsername" class="form-control" placeholder="userame" required="" autofocus="" type="">
-		        <label for="inputPassword" class="sr-only">User</label>
-		        <input name="password" id="inputPassword" class="form-control" placeholder="password" required="" autofocus="" type="">
-		        <button class="btn btn-lg " onclick="javascript: submitForm('persona/consulta')">Search</button>
-		        <button class="btn btn-lg " onclick="javascript: submitForm('persona/alta')">New</button>
-		        <button class="btn btn-lg " onclick="javascript: submitForm('persona/modificacion')">Edit</button>
-		        <button class="btn btn-lg " onclick="javascript: submitForm('persona/baja')">Delete</button>
-	    	</form>
-		</div>
-		<!-- /container -->
-		<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-		<script src="style/ie10-viewport-bug-workaround.js"></script>
-	</body>
+<body>
+<%@ page import="entities.User" %>
+<%
+String userName = ((User) session.getAttribute("usuario")).getUsuario();
+ %>
+	<div class="container">
+		<center><h1>Welcome <%=userName.toUpperCase()%></h1></center>
+		<form class="form-inline" role="form" id="myForm" name="myForm"
+			action="" method="post">
+			<h2 class="form-signin-heading">User Managment:</h2>
+			<label for="inputEmail" class="sr-only">User</label> <input
+				email="email" id="inputEmail" class="form-control"
+				placeholder="Email" required="" autofocus="" type="email"> <label
+				for="inputUsername" class="sr-only">User</label> <input
+				name="username" id="inputUsername" class="form-control"
+				placeholder="Username" required="" autofocus="" type=""> <label
+				for="inputPassword" class="sr-only">User</label> <input
+				name="password" id="inputPassword" class="form-control"
+				placeholder="Password" required="" autofocus="" type="password">
+			<button class="btn btn-lg "
+				onclick="javascript: submitForm('persona/consulta')">Search</button>
+			<button class="btn btn-lg "
+				onclick="javascript: submitForm('persona/alta')">New</button>
+			<button class="btn btn-lg "
+				onclick="javascript: submitForm('persona/modificacion')">Edit</button>
+			<button class="btn btn-lg "
+				onclick="javascript: submitForm('persona/baja')">Delete</button>
+		</form>
+	</div>
+	<!-- /container -->
+	<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+	<script src="style/ie10-viewport-bug-workaround.js"></script>
+</body>
 </html>
