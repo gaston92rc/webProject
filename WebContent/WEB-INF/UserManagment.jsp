@@ -44,13 +44,13 @@ String userName = ((User) session.getAttribute("usuario")).getUsuario();
 		<form class="form-inline" role="form" id="myForm" name="myForm"
 			action="" method="post">
 			<h2 class="form-signin-heading">User Managment:</h2>
-			<label for="inputEmail" class="sr-only">User</label> <input
+			<label for="inputEmail" class="sr-only">Email</label> <input
 				email="email" id="inputEmail" class="form-control"
 				placeholder="Email" required="" autofocus="" type="email"> <label
 				for="inputUsername" class="sr-only">User</label> <input
 				name="username" id="inputUsername" class="form-control"
 				placeholder="Username" required="" autofocus="" type=""> <label
-				for="inputPassword" class="sr-only">User</label> <input
+				for="inputPassword" class="sr-only">Password</label> <input
 				name="password" id="inputPassword" class="form-control"
 				placeholder="Password" required="" autofocus="" type="password">
 			<button class="btn btn-lg "
